@@ -120,12 +120,6 @@ pip install --upgrade pip
 pip install torch numpy matplotlib fastapi "uvicorn[standard]" pydantic
 ```
 
-If you have a CUDA-capable GPU and want to use it, install the appropriate version of PyTorch:
-
-```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-```
-
 ---
 
 ## Usage
