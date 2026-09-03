@@ -406,6 +406,6 @@ def total_loss(model, x_interior, x_wall, x_inlet, x_outlet):
     loss_pde, loss_wall, loss_inlet, loss_outlet = compute_losses(
         model, x_interior, x_wall, x_inlet, x_outlet
     )
-    loss = loss_pde + loss_wall + loss_inlet + loss_outlet
+    loss = loss_pde * 2 + loss_wall * 2 + loss_inlet + loss_outlet
 
     return (loss, loss_pde, loss_wall, loss_inlet, loss_outlet)

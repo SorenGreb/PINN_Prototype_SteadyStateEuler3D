@@ -4,6 +4,8 @@ import torch
 
 from pinn import PINN, total_loss, DEVICE
 from collocate import assemble_collocation_points
+from predictor import Predictor
+from monitor import monitor_centerline_velocity
 
 torch.set_default_dtype(torch.float32)
 
@@ -11,8 +13,8 @@ torch.set_default_dtype(torch.float32)
 # Training parameters
 # --------------------------------------------------------------------------
 
-EPOCHS = 2000
-LEARNING_RATE = 1e-3
+EPOCHS = 500
+LEARNING_RATE = 2.5e-3
 MODEL_PATH = Path("model/model.pth")
 
 
@@ -25,6 +27,10 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5000, gamma=0.5)
     history = {"loss": [], "pde": [], "wall": [], "inlet": [], "outlet": []}
     best_loss = float("inf")
+
+    # For monitoring centerline velocity:
+    predictor = Predictor(model=model, device=DEVICE)
+    fo = open("results/centerline_velocity.txt", "w")
 
     for epoch in range(epochs):
 
@@ -65,6 +71,17 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
                 f"Outlet {loss_outlet.item():10.4e} | "
                 f"LR {lr:.2e}"
             )
+
+            # if epoch % 1 == 0 or epoch == epochs - 1:
+            x, v = monitor_centerline_velocity(predictor, throat_ratio=0.6)
+            for xi in x:
+                fo.write(f"{xi[0].item():.6f} ")
+            for vi in v:
+                fo.write(f"{vi[0].item():.6f} ")
+            fo.write("\n")
+            fo.flush()
+
+    fo.close()
     if MODEL_PATH.exists():
         model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
 

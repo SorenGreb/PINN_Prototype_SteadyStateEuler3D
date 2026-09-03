@@ -131,7 +131,7 @@
 
         const mapper = vtkMapper.newInstance();
         const lookupTable = vtkLookupTable.newInstance();
-        lookupTable.setRange(0.0, 1.4);
+        lookupTable.setRange(0.0, 2.5);
         lookupTable.setNumberOfColors(256);
 
         lookupTable.setHueRange(0.667, 0.0);   // blue -> red
@@ -301,7 +301,7 @@
                 mapper.setScalarVisibility(true);
                 mapper.setColorByArrayName("velocity");
                 mapper.setScalarModeToUsePointFieldData();
-                mapper.setScalarRange(0.0, 1.4);
+                mapper.setScalarRange(0.0, 2.5);
                 mapper.setUseLookupTableScalarRange(true);
             }
 
