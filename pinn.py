@@ -3,7 +3,13 @@ from torch import nn
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.set_default_dtype(torch.float32)
-from geometry import L_TOTAL, R_INLET, nozzle_radius, nozzle_radius_gradient
+from geometry import (
+    L_TOTAL,
+    R_INLET,
+    TARGET_EXIT_MACH,
+    nozzle_radius,
+    nozzle_radius_gradient,
+)
 
 from derivatives import gradient, divergence
 from boundary_conditions import (
@@ -476,12 +482,19 @@ def outlet_loss(model: nn.Module, x_outlet: torch.Tensor):
         p_x = gradient(p, x_outlet)[0]
         p_loss = torch.mean(p_x.pow(2))  # For supersonic outlet
 
+    positive_rho = torch.nn.functional.softplus(rho) + 1.0e-6
+    positive_p = torch.nn.functional.softplus(p) + 1.0e-6
+    speed_of_sound = torch.sqrt(GAMMA * positive_p / positive_rho)
+    mach = u / speed_of_sound
+    mach_loss = torch.mean((mach - TARGET_EXIT_MACH).pow(2))
+
     loss = (
         torch.mean(rho_x.pow(2))
         + torch.mean(u_x.pow(2))
         + torch.mean(v_x.pow(2))
         + torch.mean(w_x.pow(2))
         + p_loss
+        + mach_loss
     )
 
     return loss
@@ -498,14 +511,12 @@ def compute_losses(model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios):
     """
 
     loss_pde = pde_loss(model, x_interior)
-    loss_massflow = massflow_loss(model, throat_ratios)
     loss_wall = wall_loss(model, x_wall)
     loss_inlet = inlet_loss(model, x_inlet)
     loss_outlet = outlet_loss(model, x_outlet)
 
     return (
         loss_pde,
-        loss_massflow,
         loss_wall,
         loss_inlet,
         loss_outlet,
@@ -524,28 +535,24 @@ def total_loss(model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios):
 
     (
         loss_pde,
-        loss_massflow,
         loss_wall,
         loss_inlet,
         loss_outlet,
     ) = compute_losses(model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios)
     w_pde = 1.0
-    w_massflow = 1.0
-    w_wall = 10.0
+    w_wall = 1.0
     w_inlet = 1.0
     w_outlet = 1.0
     loss = (
         w_pde * loss_pde
-        + w_massflow * loss_massflow
         + w_wall * loss_wall
         + w_inlet * loss_inlet
         + w_outlet * loss_outlet
-    ) / (w_pde + w_massflow + w_wall + w_inlet + w_outlet)
+    ) / (w_pde + w_wall + w_inlet + w_outlet)
 
     return (
         loss,
         loss_pde,
-        loss_massflow,
         loss_wall,
         loss_inlet,
         loss_outlet,

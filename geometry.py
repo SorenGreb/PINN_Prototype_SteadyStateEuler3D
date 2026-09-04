@@ -13,7 +13,7 @@ L_CONV = 0.40
 L_DIV = 0.80
 R_INLET = 0.50
 L_TOTAL = L_CONV + L_DIV
-TARGET_EXIT_MACH = 2.0
+TARGET_EXIT_MACH = 3.5
 
 
 def throat_radius(throat_ratio: float) -> float:

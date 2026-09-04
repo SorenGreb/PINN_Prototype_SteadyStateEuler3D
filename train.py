@@ -14,7 +14,7 @@ torch.set_default_dtype(torch.float32)
 # Training parameters
 # --------------------------------------------------------------------------
 
-EPOCHS = 8
+EPOCHS = 4000
 LEARNING_RATE = 2.0e-3
 MODEL_PATH = Path("model/model.pth")
 
@@ -64,7 +64,7 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
         (
             loss,
             loss_pde,
-            loss_massflow,
+            # loss_massflow,
             # loss_axisymmetry,
             loss_wall,
             loss_inlet,
@@ -82,7 +82,7 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
         scheduler.step()
         history["loss"].append(loss.item())
         history["pde"].append(loss_pde.item())
-        history["massflow"].append(loss_massflow.item())
+        # history["massflow"].append(loss_massflow.item())
         # history["axisymmetry"].append(loss_axisymmetry.item())
         history["wall"].append(loss_wall.item())
         history["inlet"].append(loss_inlet.item())
@@ -99,7 +99,7 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
                 f"Epoch {epoch:6d} | "
                 f"Loss {loss.item():10.4e} | "
                 f"PDE {loss_pde.item():10.4e} | "
-                f"MassFlow {loss_massflow.item():10.4e} | "
+                # f"MassFlow {loss_massflow.item():10.4e} | "
                 # f"Axisymmetry {loss_axisymmetry.item():10.4e} | "
                 f"Wall {loss_wall.item():10.4e} | "
                 f"Inlet {loss_inlet.item():10.4e} | "

@@ -129,13 +129,13 @@ def main():
     output_dir = Path(__file__).resolve().parent / "results"
     output_dir.mkdir(exist_ok=True)
 
-    throat_ratio = 0.20
+    throat_ratio = 0.40
 
     output_path = output_dir / "delaval_pinn_slice.png"
     # plot_longitudinal_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
     output_path = output_dir / f"delaval_pinn_surf_{throat_ratio:.2f}.png"
-    plot_nozzle_surface_velocity(predictor, output_path, throat_ratio=throat_ratio)
+    # plot_nozzle_surface_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
     output_path = output_dir / "delaval_pinn_centerline_velocity.png"
     plot_centerline_velocity(quantity="velocity")
