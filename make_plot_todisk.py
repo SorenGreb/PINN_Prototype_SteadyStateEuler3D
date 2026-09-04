@@ -1,6 +1,7 @@
 import torch
 from pathlib import Path
 import matplotlib.pyplot as plt
+import numpy as np
 
 from pinn import PINN, DEVICE
 from probes import nozzle_surface_points, longitudinal_slice
@@ -17,7 +18,7 @@ def plot_longitudinal_velocity(
     n_x: int = 120,
     n_radius: int = 220,
     cmap: str = "viridis",
-    throat_ratio: float = 0.60,
+    throat_ratio: float = 0.30,
 ):
     points, xx, r = longitudinal_slice(
         throat_ratio, theta_location, n_x=n_x, n_radius=n_radius
@@ -49,7 +50,7 @@ def plot_nozzle_surface_velocity(
     n_x: int = 120,
     n_theta: int = 180,
     cmap: str = "hot",
-    throat_ratio: float = 0.60,
+    throat_ratio: float = 0.30,
 ):
     points, xx, yy, zz = nozzle_surface_points(
         throat_ratio=throat_ratio, n_x=n_x, n_theta=n_theta
@@ -95,6 +96,30 @@ def plot_nozzle_surface_velocity(
     plt.show()
 
 
+def plot_centerline_velocity(quantity: str):
+    fo = open(f"results/centerline_{quantity}.txt", "r")
+    lines = fo.readlines()
+    count = 0
+    y = np.zeros((len(lines) - 1, len(lines[0].strip().split())))
+    for line in lines:
+        if count == 0:
+            x = [float(val) for val in line.strip().split()]
+        else:
+            y[count - 1, :] = [float(val) for val in line.strip().split()]
+        count += 1
+    fig, ax = plt.subplots(figsize=(10, 5))
+    for i in range(x.__len__()):
+        ax.plot(y[:, i], label=f"{quantity} at point {x[i]:.2f}")
+    ax.set_xlabel("epoch")
+    ax.set_ylabel(quantity)
+    ax.set_title(f"centerline {quantity}")
+    ax.legend()
+    plt.grid()
+    plt.savefig(f"results/centerline_{quantity}.png", dpi=200)
+    plt.show()
+    fo.close()
+
+
 def main():
     model = PINN().to(DEVICE)
     checkpoint = torch.load(MODEL_PATH, map_location=DEVICE)
@@ -104,13 +129,17 @@ def main():
     output_dir = Path(__file__).resolve().parent / "results"
     output_dir.mkdir(exist_ok=True)
 
-    throat_ratio = 0.60
+    throat_ratio = 0.20
 
-    # output_path = output_dir / "delaval_pinn_slice.png"
+    output_path = output_dir / "delaval_pinn_slice.png"
     # plot_longitudinal_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
     output_path = output_dir / f"delaval_pinn_surf_{throat_ratio:.2f}.png"
     plot_nozzle_surface_velocity(predictor, output_path, throat_ratio=throat_ratio)
+
+    output_path = output_dir / "delaval_pinn_centerline_velocity.png"
+    plot_centerline_velocity(quantity="velocity")
+    plot_centerline_velocity(quantity="massflow")
 
 
 if __name__ == "__main__":

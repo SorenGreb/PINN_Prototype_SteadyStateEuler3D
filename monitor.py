@@ -1,28 +1,14 @@
-import numpy as np
+import torch
 
 from predictor import Predictor
-from probes import centerline_points
+from probes import radial_slice
 
 
-def monitor_centerline_velocity(predictor: Predictor, throat_ratio: float):
-    """
-    Monitor the centerline velocity along the nozzle.
-
-    Parameters
-    ----------
-    predictor : Predictor
-        The predictor object used for inference.
-    throat_ratio : float, optional
-        The throat ratio of the nozzle, by default 0.60.
-
-    Returns
-    -------
-    np.ndarray
-        The centerline velocity along the nozzle.
-    """
-
-    # Define the x-coordinates along the nozzle centerline
-    x_centerline = centerline_points(n_points=5)
+def monitor_centerline_velocity(
+    predictor: Predictor,
+    throat_ratio: float,
+    x_centerline: torch.Tensor,
+):
 
     # Predict flow variables using the predictor
     _, u, v, w, _ = predictor.predict(x_centerline, throat_ratio=throat_ratio)
@@ -30,4 +16,35 @@ def monitor_centerline_velocity(predictor: Predictor, throat_ratio: float):
     # Extract the velocity component (assuming it's the first component)
     centerline_velocity = predictor.velocity_magnitude(u, v, w)
 
-    return x_centerline, centerline_velocity
+    return centerline_velocity
+
+
+def monitor_centerline_rho_u_area(
+    predictor: Predictor,
+    throat_ratio: float,
+    x_centerline: torch.Tensor,
+    n_radius: int = 30,
+    n_theta: int = 45,
+):
+    mass_flow = []
+
+    for x_location in x_centerline[:, 0]:
+        points, radial_coordinates, angular_coordinates = radial_slice(
+            throat_ratio=throat_ratio,
+            x_location=x_location.item(),
+            n_radius=n_radius,
+            n_theta=n_theta,
+        )
+        rho, u, _, _, _ = predictor.predict(points, throat_ratio=throat_ratio)
+
+        rho_u = (rho * u).reshape(radial_coordinates.shape)
+        integrand = rho_u * radial_coordinates
+        radial_integral = torch.trapezoid(integrand, radial_coordinates[:, 0], dim=0)
+        slice_mass_flow = torch.trapezoid(
+            radial_integral, angular_coordinates[0, :], dim=0
+        )
+        mass_flow.append(slice_mass_flow)
+
+    rho_u_area = torch.stack(mass_flow).view(-1, 1)
+
+    return rho_u_area

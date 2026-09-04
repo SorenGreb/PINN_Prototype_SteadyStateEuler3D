@@ -54,7 +54,7 @@ R_out = 4.0
 
 
 simulation_parameters = {
-    "throat_ratio": 0.6,
+    "throat_ratio": 0.3,
 }
 
 
@@ -178,7 +178,7 @@ async def graph_stream(
 
             if message.get("type") == "parameterUpdate":
                 value = float(message["throat_ratio"])
-                simulation_parameters["throat_ratio"] = min(0.8, max(0.4, value))
+                simulation_parameters["throat_ratio"] = min(0.4, max(0.2, value))
 
     sender_task = asyncio.create_task(sender())
 

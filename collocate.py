@@ -2,14 +2,19 @@ import math
 import torch
 
 from pinn import DEVICE
-from geometry import nozzle_radius, throat_radius, exit_radius
+from geometry import (
+    TARGET_EXIT_MACH,
+    nozzle_radius,
+    throat_radius,
+    exit_radius,
+)
 from geometry import L_TOTAL, R_INLET
 
 torch.set_default_dtype(torch.float32)
 
 
-THROAT_RATIO_MIN = 0.4
-THROAT_RATIO_MAX = 0.8
+THROAT_RATIO_MIN = 0.2
+THROAT_RATIO_MAX = 0.4
 
 N_INTERIOR = 5000
 N_WALL = 600
@@ -115,7 +120,7 @@ def collocate_outlet(
     """
 
     r_throat = throat_radius(throat_ratio)
-    r_exit = exit_radius(r_throat)
+    r_exit = exit_radius(r_throat, target_exit_mach=TARGET_EXIT_MACH)
     radius = torch.sqrt(torch.rand(n_points, 1, device=DEVICE)) * r_exit
     x = torch.full_like(radius, L_TOTAL)
 

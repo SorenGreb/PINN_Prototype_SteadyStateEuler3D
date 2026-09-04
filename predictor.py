@@ -47,8 +47,6 @@ class Predictor:
             x = x.unsqueeze(0)
 
         if x.shape[-1] == 3:
-            if throat_ratio is None:
-                throat_ratio = 0.60
 
             ratio = torch.as_tensor(
                 throat_ratio, dtype=torch.float32, device=self.device

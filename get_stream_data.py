@@ -39,7 +39,7 @@ class SurfaceParticleSystem:
         x_min: float,
         x_max: float,
         injection_rate: float,
-        throat_ratio: float = 0.60,
+        throat_ratio: float = 0.30,
     ):
         self.x_min = x_min
         self.x_max = x_max
@@ -234,7 +234,7 @@ particle_system = SurfaceParticleSystem(
 
 
 def generate_surface_velocity_data(
-    predictor: Predictor, n_x: int = 50, n_theta: int = 60, throat_ratio: float = 0.60
+    predictor: Predictor, n_x: int = 50, n_theta: int = 60, throat_ratio: float = 0.30
 ):
     global particle_system
 

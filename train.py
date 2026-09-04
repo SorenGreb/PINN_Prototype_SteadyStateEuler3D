@@ -5,7 +5,8 @@ import torch
 from pinn import PINN, total_loss, DEVICE
 from collocate import assemble_collocation_points
 from predictor import Predictor
-from monitor import monitor_centerline_velocity
+from monitor import monitor_centerline_rho_u_area, monitor_centerline_velocity
+from probes import centerline_points
 
 torch.set_default_dtype(torch.float32)
 
@@ -13,8 +14,8 @@ torch.set_default_dtype(torch.float32)
 # Training parameters
 # --------------------------------------------------------------------------
 
-EPOCHS = 500
-LEARNING_RATE = 2.5e-3
+EPOCHS = 8
+LEARNING_RATE = 2.0e-3
 MODEL_PATH = Path("model/model.pth")
 
 
@@ -25,12 +26,29 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
 
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5000, gamma=0.5)
-    history = {"loss": [], "pde": [], "wall": [], "inlet": [], "outlet": []}
+    history = {
+        "loss": [],
+        "pde": [],
+        "massflow": [],
+        # "axisymmetry": [],
+        "wall": [],
+        "inlet": [],
+        "outlet": [],
+    }
     best_loss = float("inf")
 
     # For monitoring centerline velocity:
     predictor = Predictor(model=model, device=DEVICE)
-    fo = open("results/centerline_velocity.txt", "w")
+    x_centerline = centerline_points(n_points=7)
+    fo_velocity = open("results/centerline_velocity.txt", "w")
+    fo_rhouarea = open("results/centerline_massflow.txt", "w")
+
+    for xi in x_centerline:
+        fo_velocity.write(f"{xi[0].item():.6f} ")
+    fo_velocity.write("\n")
+    for xi in x_centerline:
+        fo_rhouarea.write(f"{xi[0].item():.6f} ")
+    fo_rhouarea.write("\n")
 
     for epoch in range(epochs):
 
@@ -43,14 +61,29 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
         )
         optimizer.zero_grad()
 
-        loss, loss_pde, loss_wall, loss_inlet, loss_outlet = total_loss(
-            model, x_interior, x_wall, x_inlet, x_outlet
+        (
+            loss,
+            loss_pde,
+            loss_massflow,
+            # loss_axisymmetry,
+            loss_wall,
+            loss_inlet,
+            loss_outlet,
+        ) = total_loss(
+            model,
+            x_interior,
+            x_wall,
+            x_inlet,
+            x_outlet,
+            sampled_throat_ratios,
         )
         loss.backward()
         optimizer.step()
         scheduler.step()
         history["loss"].append(loss.item())
         history["pde"].append(loss_pde.item())
+        history["massflow"].append(loss_massflow.item())
+        # history["axisymmetry"].append(loss_axisymmetry.item())
         history["wall"].append(loss_wall.item())
         history["inlet"].append(loss_inlet.item())
         history["outlet"].append(loss_outlet.item())
@@ -66,6 +99,8 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
                 f"Epoch {epoch:6d} | "
                 f"Loss {loss.item():10.4e} | "
                 f"PDE {loss_pde.item():10.4e} | "
+                f"MassFlow {loss_massflow.item():10.4e} | "
+                # f"Axisymmetry {loss_axisymmetry.item():10.4e} | "
                 f"Wall {loss_wall.item():10.4e} | "
                 f"Inlet {loss_inlet.item():10.4e} | "
                 f"Outlet {loss_outlet.item():10.4e} | "
@@ -73,15 +108,24 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
             )
 
             # if epoch % 1 == 0 or epoch == epochs - 1:
-            x, v = monitor_centerline_velocity(predictor, throat_ratio=0.6)
-            for xi in x:
-                fo.write(f"{xi[0].item():.6f} ")
+            v = monitor_centerline_velocity(
+                predictor, throat_ratio=0.3, x_centerline=x_centerline
+            )
             for vi in v:
-                fo.write(f"{vi[0].item():.6f} ")
-            fo.write("\n")
-            fo.flush()
+                fo_velocity.write(f"{vi[0].item():.6f} ")
+            fo_velocity.write("\n")
+            fo_velocity.flush()
 
-    fo.close()
+            rhouarea = monitor_centerline_rho_u_area(
+                predictor, throat_ratio=0.3, x_centerline=x_centerline
+            )
+            for value in rhouarea:
+                fo_rhouarea.write(f"{value[0].item():.6f} ")
+            fo_rhouarea.write("\n")
+            fo_rhouarea.flush()
+
+    fo_velocity.close()
+    fo_rhouarea.close()
     if MODEL_PATH.exists():
         model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
 

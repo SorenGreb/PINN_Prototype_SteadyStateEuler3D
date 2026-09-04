@@ -3,7 +3,7 @@ from torch import nn
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.set_default_dtype(torch.float32)
-from geometry import nozzle_radius, nozzle_radius_gradient
+from geometry import L_TOTAL, R_INLET, nozzle_radius, nozzle_radius_gradient
 
 from derivatives import gradient, divergence
 from boundary_conditions import (
@@ -279,6 +279,118 @@ def pde_loss(model, x):
     return loss
 
 
+def massflow_loss(
+    model: nn.Module,
+    throat_ratios: torch.Tensor,
+    n_x: int = 12,
+    n_radius: int = 30,
+    n_theta: int = 45,
+):
+    """Penalize axial variation of the integrated mass flow."""
+
+    x_locations = torch.linspace(
+        0.0, L_TOTAL, n_x, device=throat_ratios.device, dtype=throat_ratios.dtype
+    )
+    radial_coordinate = torch.linspace(
+        0.0, 1.0, n_radius, device=throat_ratios.device, dtype=throat_ratios.dtype
+    )
+    angular_coordinate = torch.linspace(
+        0.0,
+        2.0 * torch.pi,
+        n_theta,
+        device=throat_ratios.device,
+        dtype=throat_ratios.dtype,
+    )
+
+    mass_flows = []
+    for throat_ratio in throat_ratios.reshape(-1):
+        x, radial = torch.meshgrid(x_locations, radial_coordinate, indexing="ij")
+        radius = nozzle_radius(x, throat_ratio)
+        radial = radial * radius
+        theta = angular_coordinate.view(1, 1, -1)
+
+        x_points = x.unsqueeze(-1).expand(-1, -1, n_theta)
+        y_points = radial.unsqueeze(-1) * torch.cos(theta)
+        z_points = radial.unsqueeze(-1) * torch.sin(theta)
+        ratio_points = torch.ones_like(x_points) * throat_ratio
+        points = torch.stack(
+            [x_points, y_points, z_points, ratio_points], dim=-1
+        ).reshape(-1, 4)
+
+        rho, u, _, _, _ = primitive_variables(model, points)
+        rho_u = (rho * u).reshape(n_x, n_radius, n_theta)
+        integrand = rho_u * radial.unsqueeze(-1)
+        radial_integral = torch.trapezoid(integrand, radial_coordinate, dim=1)
+        radial_integral = radial_integral * radius[:, 0:1]
+        slice_mass_flow = torch.trapezoid(radial_integral, angular_coordinate, dim=1)
+        mass_flows.append(slice_mass_flow)
+
+    mass_flows = torch.stack(mass_flows)
+    inlet_mass_flow = RHO_INLET * U_INLET * torch.pi * R_INLET**2
+    reference = torch.as_tensor(
+        inlet_mass_flow,
+        device=mass_flows.device,
+        dtype=mass_flows.dtype,
+    )
+    return torch.mean((mass_flows - reference).pow(2)) / (reference.pow(2) + 1.0e-6)
+
+
+def axisymmetry_loss(
+    model: nn.Module,
+    throat_ratios: torch.Tensor,
+    n_x: int = 12,
+    n_radius: int = 15,
+    n_theta: int = 20,
+):
+    """Penalize azimuthal variation of the axisymmetric flow variables."""
+
+    x_locations = torch.linspace(
+        0.0, L_TOTAL, n_x, device=throat_ratios.device, dtype=throat_ratios.dtype
+    )
+    normalized_radius = torch.linspace(
+        0.0, 1.0, n_radius, device=throat_ratios.device, dtype=throat_ratios.dtype
+    )
+    angular_coordinate = torch.linspace(
+        0.0,
+        2.0 * torch.pi,
+        n_theta,
+        device=throat_ratios.device,
+        dtype=throat_ratios.dtype,
+    )
+    x, normalized_radius = torch.meshgrid(x_locations, normalized_radius, indexing="ij")
+    theta = angular_coordinate.view(1, 1, -1)
+
+    losses = []
+    for throat_ratio in throat_ratios.reshape(-1):
+        radius = nozzle_radius(x, throat_ratio)
+        radial = normalized_radius * radius
+        x_points = x.unsqueeze(-1).expand(-1, -1, n_theta)
+        y_points = radial.unsqueeze(-1) * torch.cos(theta)
+        z_points = radial.unsqueeze(-1) * torch.sin(theta)
+        ratio_points = torch.ones_like(x_points) * throat_ratio
+        points = torch.stack(
+            [x_points, y_points, z_points, ratio_points], dim=-1
+        ).reshape(-1, 4)
+
+        rho, u, v, w, p = primitive_variables(model, points)
+        shape = (n_x, n_radius, n_theta)
+        rho = rho.reshape(shape)
+        u = u.reshape(shape)
+        p = p.reshape(shape)
+        v = v.reshape(shape)
+        w = w.reshape(shape)
+
+        radial_velocity = v * torch.cos(theta) + w * torch.sin(theta)
+        tangential_velocity = -v * torch.sin(theta) + w * torch.cos(theta)
+        fields = (rho, u, radial_velocity, tangential_velocity, p)
+        for field in fields:
+            azimuthal_mean = field.mean(dim=2, keepdim=True)
+            scale = field.detach().pow(2).mean() + 1.0e-6
+            losses.append(torch.mean((field - azimuthal_mean).pow(2)) / scale)
+
+    return torch.stack(losses).mean()
+
+
 # ==========================================================================
 # Wall boundary condition
 # ==========================================================================
@@ -380,17 +492,24 @@ def outlet_loss(model: nn.Module, x_outlet: torch.Tensor):
 # ==========================================================================
 
 
-def compute_losses(model, x_interior, x_wall, x_inlet, x_outlet):
+def compute_losses(model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios):
     """
     Compute every individual loss term.
     """
 
     loss_pde = pde_loss(model, x_interior)
+    loss_massflow = massflow_loss(model, throat_ratios)
     loss_wall = wall_loss(model, x_wall)
     loss_inlet = inlet_loss(model, x_inlet)
     loss_outlet = outlet_loss(model, x_outlet)
 
-    return (loss_pde, loss_wall, loss_inlet, loss_outlet)
+    return (
+        loss_pde,
+        loss_massflow,
+        loss_wall,
+        loss_inlet,
+        loss_outlet,
+    )
 
 
 # ==========================================================================
@@ -398,14 +517,36 @@ def compute_losses(model, x_interior, x_wall, x_inlet, x_outlet):
 # ==========================================================================
 
 
-def total_loss(model, x_interior, x_wall, x_inlet, x_outlet):
+def total_loss(model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios):
     """
     Complete PINN objective.
     """
 
-    loss_pde, loss_wall, loss_inlet, loss_outlet = compute_losses(
-        model, x_interior, x_wall, x_inlet, x_outlet
-    )
-    loss = loss_pde * 2 + loss_wall * 2 + loss_inlet + loss_outlet
+    (
+        loss_pde,
+        loss_massflow,
+        loss_wall,
+        loss_inlet,
+        loss_outlet,
+    ) = compute_losses(model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios)
+    w_pde = 1.0
+    w_massflow = 1.0
+    w_wall = 10.0
+    w_inlet = 1.0
+    w_outlet = 1.0
+    loss = (
+        w_pde * loss_pde
+        + w_massflow * loss_massflow
+        + w_wall * loss_wall
+        + w_inlet * loss_inlet
+        + w_outlet * loss_outlet
+    ) / (w_pde + w_massflow + w_wall + w_inlet + w_outlet)
 
-    return (loss, loss_pde, loss_wall, loss_inlet, loss_outlet)
+    return (
+        loss,
+        loss_pde,
+        loss_massflow,
+        loss_wall,
+        loss_inlet,
+        loss_outlet,
+    )
