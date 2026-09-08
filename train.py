@@ -44,7 +44,7 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
     fo_massflow = open("results/centerline_massflow.txt", "w")
     fo_rho = open("results/centerline_rho.txt", "w")
     fo_p = open("results/centerline_p.txt", "w")
-    fo_loss = open("results/loss.txt", "w")
+    fo_loss = open("results/loss_history.txt", "w")
 
     for xi in x_centerline:
         fo_velocity.write(f"{xi[0].item():.6f} ")

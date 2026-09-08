@@ -96,7 +96,7 @@ def plot_nozzle_surface_velocity(
     plt.show()
 
 
-def plot_centerline_velocity(quantity: str):
+def plot_centerline_quantity(quantity: str):
     fo = open(f"results/centerline_{quantity}.txt", "r")
     lines = fo.readlines()
     count = 0
@@ -120,7 +120,7 @@ def plot_centerline_velocity(quantity: str):
     fo.close()
 
 
-def plot_loss():
+def plot_loss_history():
     fo = open(f"results/loss.txt", "r")
     lines = fo.readlines()
     count = 0
@@ -154,7 +154,7 @@ def main():
     output_dir = Path(__file__).resolve().parent / "results"
     output_dir.mkdir(exist_ok=True)
 
-    throat_ratio = 0.30
+    throat_ratio = 0.20
 
     output_path = output_dir / "delaval_pinn_slice.png"
     # plot_longitudinal_velocity(predictor, output_path, throat_ratio=throat_ratio)
@@ -162,11 +162,11 @@ def main():
     output_path = output_dir / f"delaval_pinn_surf_{throat_ratio:.2f}.png"
     plot_nozzle_surface_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
-    plot_centerline_velocity(quantity="velocity")
-    plot_centerline_velocity(quantity="massflow")
-    plot_centerline_velocity(quantity="rho")
-    plot_centerline_velocity(quantity="p")
-    plot_loss()
+    plot_centerline_quantity(quantity="velocity")
+    plot_centerline_quantity(quantity="massflow")
+    plot_centerline_quantity(quantity="rho")
+    plot_centerline_quantity(quantity="p")
+    plot_loss_history()
 
 
 if __name__ == "__main__":
