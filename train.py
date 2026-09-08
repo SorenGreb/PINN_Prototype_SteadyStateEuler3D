@@ -14,8 +14,8 @@ torch.set_default_dtype(torch.float32)
 # Training parameters
 # --------------------------------------------------------------------------
 
-EPOCHS = 20000
-LEARNING_RATE = 1.0e-3
+EPOCHS = 10000
+LEARNING_RATE = 2.0e-3
 MODEL_PATH = Path("model/model.pth")
 
 
@@ -24,8 +24,11 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
     Train the Physics-Informed Neural Network.
     """
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5000, gamma=0.5)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=LEARNING_RATE, weight_decay=1e-4
+    )
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=0.9)
     history = {
         "loss": [],
         "pde": [],

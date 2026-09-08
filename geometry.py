@@ -9,8 +9,8 @@ torch.set_default_dtype(torch.float32)
 # Geometry parameters
 # --------------------------------------------------------------------------
 
-L_CONV = 0.40
-L_DIV = 0.80
+L_CONV = 1.5
+L_DIV = 3.0
 R_INLET = 0.50
 L_TOTAL = L_CONV + L_DIV
 TARGET_EXIT_MACH = 3.5
