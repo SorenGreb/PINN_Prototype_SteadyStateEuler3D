@@ -14,7 +14,7 @@ torch.set_default_dtype(torch.float32)
 # Training parameters
 # --------------------------------------------------------------------------
 
-EPOCHS = 10000
+EPOCHS = 20000
 LEARNING_RATE = 1.0e-3
 MODEL_PATH = Path("model/model.pth")
 
@@ -163,5 +163,5 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
 
 
 if __name__ == "__main__":
-    model = PINN(hidden_dim=64, n_layers=4)
+    model = PINN(hidden_dim=64, n_layers=2)
     train_pinn(model)

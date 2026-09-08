@@ -121,7 +121,7 @@ def plot_centerline_quantity(quantity: str):
 
 
 def plot_loss_history():
-    fo = open(f"results/loss.txt", "r")
+    fo = open(f"results/loss_history.txt", "r")
     lines = fo.readlines()
     count = 0
     y = np.zeros((len(lines) - 1, len(lines[0].strip().split())))
@@ -146,7 +146,7 @@ def plot_loss_history():
 
 
 def main():
-    model = PINN(hidden_dim=64, n_layers=4).to(DEVICE)
+    model = PINN(hidden_dim=64, n_layers=2).to(DEVICE)
     checkpoint = torch.load(MODEL_PATH, map_location=DEVICE)
     model.load_state_dict(checkpoint)
     predictor = Predictor(model=model, device=DEVICE)
