@@ -34,7 +34,7 @@ class PINN(nn.Module):
     Fully-connected neural network representing the flow field.
     """
 
-    def __init__(self, hidden_dim: int = 64, n_layers: int = 4) -> None:
+    def __init__(self, hidden_dim: int = 64, n_layers: int = 6) -> None:
         super().__init__()
 
         layers = [nn.Linear(4, hidden_dim), nn.Tanh()]

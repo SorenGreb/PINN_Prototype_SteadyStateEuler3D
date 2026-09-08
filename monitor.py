@@ -4,22 +4,19 @@ from predictor import Predictor
 from probes import radial_slice
 
 
-def monitor_centerline_velocity(
+def monitor_centerline_velocity_rho_p(
     predictor: Predictor,
     throat_ratio: float,
     x_centerline: torch.Tensor,
 ):
+    rho, u, v, w, p = predictor.predict(x_centerline, throat_ratio=throat_ratio)
 
-    # Predict flow variables using the predictor
-    _, u, v, w, _ = predictor.predict(x_centerline, throat_ratio=throat_ratio)
+    velocity_magnitude = predictor.velocity_magnitude(u, v, w)
 
-    # Extract the velocity component (assuming it's the first component)
-    centerline_velocity = predictor.velocity_magnitude(u, v, w)
-
-    return centerline_velocity
+    return rho, velocity_magnitude, p
 
 
-def monitor_centerline_rho_u_area(
+def monitor_crosssectional_massflow(
     predictor: Predictor,
     throat_ratio: float,
     x_centerline: torch.Tensor,

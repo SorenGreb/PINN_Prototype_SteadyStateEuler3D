@@ -120,8 +120,33 @@ def plot_centerline_velocity(quantity: str):
     fo.close()
 
 
+def plot_loss():
+    fo = open(f"results/loss.txt", "r")
+    lines = fo.readlines()
+    count = 0
+    y = np.zeros((len(lines) - 1, len(lines[0].strip().split())))
+    for line in lines:
+        if count == 0:
+            x = [val for val in line.strip().split()]
+        else:
+            y[count - 1, :] = [float(val) for val in line.strip().split()]
+        count += 1
+    fig, ax = plt.subplots(figsize=(10, 5))
+    for i in range(x.__len__()):
+        ax.plot(y[:, i], label=f"{x[i]}")
+    ax.set_xlabel("epoch")
+    ax.set_ylabel("loss")
+    ax.set_title(f"loss history")
+    ax.set_yscale("log")
+    ax.legend()
+    plt.grid()
+    plt.savefig(f"results/loss_history.png", dpi=200)
+    plt.show()
+    fo.close()
+
+
 def main():
-    model = PINN().to(DEVICE)
+    model = PINN(hidden_dim=64, n_layers=4).to(DEVICE)
     checkpoint = torch.load(MODEL_PATH, map_location=DEVICE)
     model.load_state_dict(checkpoint)
     predictor = Predictor(model=model, device=DEVICE)
@@ -129,17 +154,19 @@ def main():
     output_dir = Path(__file__).resolve().parent / "results"
     output_dir.mkdir(exist_ok=True)
 
-    throat_ratio = 0.40
+    throat_ratio = 0.30
 
     output_path = output_dir / "delaval_pinn_slice.png"
     # plot_longitudinal_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
     output_path = output_dir / f"delaval_pinn_surf_{throat_ratio:.2f}.png"
-    # plot_nozzle_surface_velocity(predictor, output_path, throat_ratio=throat_ratio)
+    plot_nozzle_surface_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
-    output_path = output_dir / "delaval_pinn_centerline_velocity.png"
     plot_centerline_velocity(quantity="velocity")
     plot_centerline_velocity(quantity="massflow")
+    plot_centerline_velocity(quantity="rho")
+    plot_centerline_velocity(quantity="p")
+    plot_loss()
 
 
 if __name__ == "__main__":

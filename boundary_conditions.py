@@ -1,6 +1,6 @@
 RHO_INLET = 1.0
 P_INLET = 2.0
-U_INLET = 0.5
+U_INLET = 0.25
 V_INLET = 0.0
 W_INLET = 0.0
 
