@@ -19,7 +19,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Load model
 # ---------------------------------------------------------
 
-model = PINN(hidden_dim=64, n_layers=4).to(DEVICE)
+model = PINN(hidden_dim=64, n_layers=2).to(DEVICE)
 checkpoint = torch.load("model/model.pth", map_location=DEVICE)
 model.load_state_dict(checkpoint)
 model.eval()

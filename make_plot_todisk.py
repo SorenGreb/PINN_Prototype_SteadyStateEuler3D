@@ -154,7 +154,7 @@ def main():
     output_dir = Path(__file__).resolve().parent / "results"
     output_dir.mkdir(exist_ok=True)
 
-    throat_ratio = 0.20
+    throat_ratio = 0.30
 
     output_path = output_dir / "delaval_pinn_slice.png"
     # plot_longitudinal_velocity(predictor, output_path, throat_ratio=throat_ratio)

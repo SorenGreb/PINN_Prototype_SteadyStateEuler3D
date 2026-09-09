@@ -81,11 +81,11 @@ class Predictor:
 
         q = self.model(x)
 
-        rho = q[:, 0:1]
+        rho = torch.nn.functional.softplus(q[:, 0:1]) + 1.0e-6
         u = q[:, 1:2]
         v = q[:, 2:3]
         w = q[:, 3:4]
-        p = q[:, 4:5]
+        p = torch.nn.functional.softplus(q[:, 4:5]) + 1.0e-6
 
         return (rho, u, v, w, p)
 

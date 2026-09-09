@@ -20,6 +20,65 @@ def throat_radius(throat_ratio: float) -> float:
     return throat_ratio * R_INLET
 
 
+def inlet_speed_for_sonic_throat(throat_radius: float) -> float:
+    """Return the subsonic inlet speed compatible with a choked throat.
+
+    The inlet density and pressure are treated as static values from the
+    boundary conditions. The returned speed makes the isentropic mass flow at
+    the inlet equal to the choked mass flow through the supplied throat area.
+    """
+
+    from boundary_conditions import P_INLET, RHO_INLET
+
+    if throat_radius <= 0.0 or throat_radius > R_INLET:
+        raise ValueError("throat_radius must be greater than 0 and at most R_INLET")
+    if RHO_INLET <= 0.0 or P_INLET <= 0.0:
+        raise ValueError("RHO_INLET and P_INLET must be positive")
+
+    area_ratio = (throat_radius / R_INLET) ** 2
+    sound_speed = math.sqrt(GAMMA * P_INLET / RHO_INLET)
+    critical_mass_flux_factor = (2.0 / (GAMMA + 1.0)) ** (
+        (GAMMA + 1.0) / (2.0 * (GAMMA - 1.0))
+    )
+    mach_factor_exponent = (GAMMA + 1.0) / (2.0 * (GAMMA - 1.0))
+
+    def mass_flow_residual(mach: float) -> float:
+        pressure_factor = 1.0 + 0.5 * (GAMMA - 1.0) * mach**2
+        choked_mass_flux = (
+            critical_mass_flux_factor * pressure_factor**mach_factor_exponent
+        )
+        return mach - area_ratio * choked_mass_flux
+
+    lower_mach = 0.0
+    upper_mach = 1.0
+    for _ in range(80):
+        mach = 0.5 * (lower_mach + upper_mach)
+        if mass_flow_residual(mach) > 0.0:
+            upper_mach = mach
+        else:
+            lower_mach = mach
+
+    return sound_speed * 0.5 * (lower_mach + upper_mach)
+
+
+def sonic_throat_state(throat_radius: float) -> tuple[float, float, float]:
+    """Return sonic throat density, axial speed, and pressure."""
+
+    from boundary_conditions import P_INLET, RHO_INLET
+
+    inlet_sound_speed = math.sqrt(GAMMA * P_INLET / RHO_INLET)
+    inlet_speed = inlet_speed_for_sonic_throat(throat_radius)
+    inlet_mach = inlet_speed / inlet_sound_speed
+    stagnation_factor = 1.0 + 0.5 * (GAMMA - 1.0) * inlet_mach**2
+    stagnation_density = RHO_INLET * stagnation_factor ** (1.0 / (GAMMA - 1.0))
+    stagnation_pressure = P_INLET * stagnation_factor ** (GAMMA / (GAMMA - 1.0))
+    critical_factor = 2.0 / (GAMMA + 1.0)
+    throat_density = stagnation_density * critical_factor ** (1.0 / (GAMMA - 1.0))
+    throat_pressure = stagnation_pressure * critical_factor ** (GAMMA / (GAMMA - 1.0))
+    throat_speed = math.sqrt(GAMMA * throat_pressure / throat_density)
+    return throat_density, throat_speed, throat_pressure
+
+
 def exit_radius(
     throat_radius: float, target_exit_mach: float = TARGET_EXIT_MACH
 ) -> float:
