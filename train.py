@@ -15,7 +15,7 @@ torch.set_default_dtype(torch.float32)
 # --------------------------------------------------------------------------
 
 EPOCHS = 10000
-LEARNING_RATE = 5.0e-3
+LEARNING_RATE = 1.0e-3
 MODEL_PATH = Path("model/model.pth")
 
 
