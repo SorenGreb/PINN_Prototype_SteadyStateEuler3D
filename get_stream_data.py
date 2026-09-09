@@ -229,7 +229,7 @@ class SurfaceParticleSystem:
 
 
 particle_system = SurfaceParticleSystem(
-    x_min=0.0, x_max=L_TOTAL, injection_rate=100.0  # particles / second
+    x_min=0.0, x_max=L_TOTAL, injection_rate=5.0  # particles / second
 )
 
 
@@ -240,7 +240,7 @@ def generate_surface_velocity_data(
 
     if particle_system.throat_ratio != throat_ratio:
         particle_system = SurfaceParticleSystem(
-            x_min=0.0, x_max=L_TOTAL, injection_rate=100.0, throat_ratio=throat_ratio
+            x_min=0.0, x_max=L_TOTAL, injection_rate=5.0, throat_ratio=throat_ratio
         )
 
     points, xx, yy, zz = nozzle_surface_points(
@@ -250,7 +250,7 @@ def generate_surface_velocity_data(
     _, u, v, w, _ = predictor.predict(points, throat_ratio=throat_ratio)
     velocity = predictor.velocity_magnitude(u, v, w)
     velocity = velocity.view(xx.shape[0], xx.shape[1]).cpu()
-    dt = 0.05
+    dt = 0.5
     particle_system.inject(dt)
     particle_system.advect(velocity_magnitude=velocity, dt=dt)
     particle_system.remove_outside_domain()

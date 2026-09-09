@@ -131,7 +131,7 @@
 
         const mapper = vtkMapper.newInstance();
         const lookupTable = vtkLookupTable.newInstance();
-        lookupTable.setRange(0.0, 4.0);
+        lookupTable.setRange(0.0, 2.0);
         lookupTable.setNumberOfColors(256);
 
         lookupTable.setHueRange(0.667, 0.0);   // blue -> red
@@ -189,7 +189,7 @@
 
                 // Create a sphere for this particle
                 const sphere = vtkSphereSource.newInstance({
-                    radius: 0.01,
+                    radius: 0.03,
                     thetaResolution: 12,
                     phiResolution: 12,
                     center: [x, y, z]
@@ -301,7 +301,7 @@
                 mapper.setScalarVisibility(true);
                 mapper.setColorByArrayName("velocity");
                 mapper.setScalarModeToUsePointFieldData();
-                mapper.setScalarRange(0.0, 4.0);
+                mapper.setScalarRange(0.0, 2.0);
                 mapper.setUseLookupTableScalarRange(true);
             }
 

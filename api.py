@@ -45,14 +45,6 @@ app.add_middleware(
 )
 
 
-# ---------------------------------------------------------
-# Simulation parameters
-# ---------------------------------------------------------
-
-R = 1.0
-R_out = 4.0
-
-
 simulation_parameters = {
     "throat_ratio": 0.3,
 }
