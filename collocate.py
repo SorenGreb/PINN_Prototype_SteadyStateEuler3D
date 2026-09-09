@@ -8,7 +8,7 @@ from geometry import (
     throat_radius,
     exit_radius,
 )
-from geometry import L_CONV, L_TOTAL, R_INLET
+from geometry import L_TOTAL, R_INLET
 
 torch.set_default_dtype(torch.float32)
 
@@ -20,9 +20,6 @@ N_INTERIOR = 5000
 N_WALL = 600
 N_INLET = 300
 N_OUTLET = 300
-
-THROAT_FOCUS_FRACTION = 0.5
-THROAT_FOCUS_HALF_WIDTH = 0.5
 
 
 # ================================================
@@ -70,25 +67,14 @@ def collocate_interior(
     throat_ratio: float,
 ) -> torch.Tensor:
     """
-    Sample the nozzle volume with extra axial density around the throat.
+    Uniformly sample the nozzle volume.
 
     Returns
     -------
     Tensor of shape (N,4)
     """
 
-    n_focused = int(n_points * THROAT_FOCUS_FRACTION)
-    n_global = n_points - n_focused
-
-    x_global = torch.rand(n_global, 1, device=DEVICE) * L_TOTAL
-    throat_x = L_CONV
-    x_focused = (
-        throat_x
-        + (2.0 * torch.rand(n_focused, 1, device=DEVICE) - 1.0)
-        * THROAT_FOCUS_HALF_WIDTH
-    )
-    x = torch.cat([x_global, x_focused], dim=0)
-
+    x = torch.rand(n_points, 1, device=DEVICE) * L_TOTAL
     radius = nozzle_radius(x, throat_ratio)
     return _sample_circular_points(
         n_points, radius, x, throat_ratio=throat_ratio, interior=True
