@@ -13,38 +13,6 @@ This repository implements a physics-informed neural network for the steady comp
 
 ---
 
-## PINNs in a nutshell
-A Physics-Informed Neural Network (PINN) is a special type of neural network. In a classical neural network, the network prediction ($y_{\mathrm{pred}}$) is compared against training data ($y_{\mathrm{train}}$). The optimizer minimizes an error (loss) function, for example
-
-$$
-\mathrm{erf}\left(y_{\mathrm{pred}}-y_{\mathrm{train}}\right),
-$$
-
-where $\mathrm{erf}$ denotes a suitable error measure such as the squared error or mean squared error.
-
-A PINN can be trained in the same way as a classical neural network, but it can also approximate the solution of a differential equation. Instead of relying solely on training data, the governing differential equation is incorporated into the loss function. In contrast to classical numerical methods, the required spatial and temporal derivatives are obtained by automatic differentiation of the neural network rather than discretization-based approximations.
-
-Writing the differential equation in residual form, where $\phi$ is the unknown field,
-
-$$
-\mathcal{R}(\phi)=0,
-$$
-
-the exact solution satisfies this equation everywhere in the computational domain. During training, the neural network predicts an approximate solution, which generally does not satisfy the equation exactly. Evaluating the residual with the network prediction yields $\mathrm{Loss}_{\mathrm{inner}}$. Additional loss terms enforce the boundary and initial conditions. The total loss is then formed as a weighted sum of the individual contributions,
-
-$$
-\mathrm{Loss}_{\mathrm{total}} =
-w_{\mathrm{inner}}
-\mathrm{Loss}_{\mathrm{inner}} +
-w_{\mathrm{boundary}}
-\mathrm{Loss}_{\mathrm{boundary}} +
-w_{\mathrm{data}}
-\mathrm{Loss}_{\mathrm{data}} +\cdots,
-$$
-
-where the weights control the relative importance of the different objectives during training. In principle, a PINN can approximate the solution of a differential equation using only the governing equations together with the boundary and initial conditions. If additional data are available, they can be incorporated through the data loss to improve the solution or accelerate convergence (see $\mathrm{Loss}_{\mathrm{data}}$).
-
----
 
 ## Physical setup
 
@@ -57,7 +25,7 @@ $$
 \nabla \cdot (\rho \mathbf{u} \mathbf{u} + p \mathbf{I}) = 0,
 $$
 $$
-\nabla \cdot (\rho \mathbf{u} E) = 0,
+\nabla \cdot [(E+p) \mathbf{u}] = 0,
 $$
 
 where $E$ is the total specific energy. The nozzle geometry is parametrized by the throat ratio and is discretized using Cartesian coordinates $(x, y, z)$.
@@ -65,7 +33,7 @@ where $E$ is the total specific energy. The nozzle geometry is parametrized by t
 **Boundary conditions:**
 - **Inlet:** Uniform primitive variables (density, velocity, pressure)
 - **Wall:** Slip boundary condition ($\mathbf{u} \cdot \mathbf{n} = 0$)
-- **Outlet:** Pressure fixed; density and velocity components use zero-gradient conditions
+- **Outlet:** zero-gradient conditions for all primitive variables
 
 ---
 

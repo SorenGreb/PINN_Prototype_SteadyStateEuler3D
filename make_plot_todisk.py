@@ -17,7 +17,7 @@ def plot_longitudinal_velocity(
     theta_location: float = 0.0,
     n_x: int = 120,
     n_radius: int = 220,
-    cmap: str = "viridis",
+    cmap: str = "rainbow",
     throat_ratio: float = 0.30,
 ):
     points, xx, r = longitudinal_slice(
@@ -49,7 +49,7 @@ def plot_nozzle_surface_velocity(
     output_path: Path,
     n_x: int = 120,
     n_theta: int = 180,
-    cmap: str = "hot",
+    cmap: str = "rainbow",
     throat_ratio: float = 0.30,
 ):
     points, xx, yy, zz = nozzle_surface_points(
@@ -70,9 +70,10 @@ def plot_nozzle_surface_velocity(
         yy.cpu().numpy(),
         zz.cpu().numpy(),
         facecolors=facecolors,
-        linewidth=0,
+        edgecolor="black",
+        linewidth=0.2,
         antialiased=True,
-        shade=False,
+        shade=True,
     )
     ax.set_title(
         f"Velocity magnitude on the nozzle surface (throat ratio={throat_ratio:.2f})"
@@ -154,10 +155,10 @@ def main():
     output_dir = Path(__file__).resolve().parent / "results"
     output_dir.mkdir(exist_ok=True)
 
-    throat_ratio = 0.30
+    throat_ratio = 0.20
 
     output_path = output_dir / "delaval_pinn_slice.png"
-    # plot_longitudinal_velocity(predictor, output_path, throat_ratio=throat_ratio)
+    plot_longitudinal_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
     output_path = output_dir / f"delaval_pinn_surf_{throat_ratio:.2f}.png"
     plot_nozzle_surface_velocity(predictor, output_path, throat_ratio=throat_ratio)
