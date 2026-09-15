@@ -107,6 +107,18 @@ def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
         (0, (5, 1)),
         (0, (3, 5, 1, 5)),
     ]
+    line_colors = [
+        "tab:blue",
+        "tab:orange",
+        "tab:green",
+        "tab:red",
+        "tab:purple",
+        "tab:brown",
+        "tab:pink",
+        "tab:gray",
+        "tab:olive",
+        "tab:cyan",
+    ]
     fig, ax = plt.subplots(figsize=(10, 5))
 
     for ratio_index, throat_ratio in enumerate(throat_ratios):
@@ -129,6 +141,7 @@ def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
         for point_index in range(len(x)):
             ax.plot(
                 y[:, point_index],
+                color=line_colors[point_index % len(line_colors)],
                 linestyle=line_styles[ratio_index % len(line_styles)],
                 linewidth=1.5,
                 alpha=1.0,
