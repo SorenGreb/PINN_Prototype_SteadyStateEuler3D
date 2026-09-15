@@ -98,7 +98,15 @@ def plot_nozzle_surface_velocity(
 
 
 def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
-    line_styles = ["-", "--", "-.", ":", (0, (5, 2)), (0, (1, 2))]
+    line_styles = [
+        "-",
+        "--",
+        ":",
+        "-.",
+        (0, (3, 1, 1, 1)),
+        (0, (5, 1)),
+        (0, (3, 5, 1, 5)),
+    ]
     fig, ax = plt.subplots(figsize=(10, 5))
 
     for ratio_index, throat_ratio in enumerate(throat_ratios):
@@ -122,8 +130,8 @@ def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
             ax.plot(
                 y[:, point_index],
                 linestyle=line_styles[ratio_index % len(line_styles)],
-                linewidth=1.0,
-                alpha=0.9,
+                linewidth=1.5,
+                alpha=1.0,
                 label=f"{quantity} tr={throat_ratio:.2f} @ x={x[point_index]:.2f}",
             )
 
