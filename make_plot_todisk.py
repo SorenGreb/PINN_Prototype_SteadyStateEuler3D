@@ -122,7 +122,7 @@ def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
             ax.plot(
                 y[:, point_index],
                 linestyle=line_styles[ratio_index % len(line_styles)],
-                linewidth=1.8,
+                linewidth=1.0,
                 alpha=0.9,
                 label=f"{quantity} tr={throat_ratio:.2f} @ x={x[point_index]:.2f}",
             )
