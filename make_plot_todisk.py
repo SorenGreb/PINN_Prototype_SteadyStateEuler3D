@@ -97,28 +97,46 @@ def plot_nozzle_surface_velocity(
     plt.show()
 
 
-def plot_centerline_quantity(quantity: str):
-    fo = open(f"results/centerline_{quantity}.txt", "r")
-    lines = fo.readlines()
-    count = 0
-    y = np.zeros((len(lines) - 1, len(lines[0].strip().split())))
-    for line in lines:
-        if count == 0:
-            x = [float(val) for val in line.strip().split()]
-        else:
-            y[count - 1, :] = [float(val) for val in line.strip().split()]
-        count += 1
+def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
+    line_styles = ["-", "--", "-.", ":", (0, (5, 2)), (0, (1, 2))]
     fig, ax = plt.subplots(figsize=(10, 5))
-    for i in range(x.__len__()):
-        ax.plot(y[:, i], label=f"{quantity} at point {x[i]:.2f}")
+
+    for ratio_index, throat_ratio in enumerate(throat_ratios):
+        file_name = f"results/centerline_{quantity}_tr{int(throat_ratio * 100):02d}.txt"
+        try:
+            with open(file_name, "r") as fo:
+                lines = fo.readlines()
+        except FileNotFoundError:
+            continue
+
+        if len(lines) < 2:
+            continue
+
+        x = [float(val) for val in lines[0].strip().split()]
+        y = np.zeros((len(lines) - 1, len(x)))
+        for row_index, line in enumerate(lines[1:]):
+            if line.strip():
+                y[row_index, :] = [float(val) for val in line.strip().split()]
+
+        for point_index in range(len(x)):
+            ax.plot(
+                y[:, point_index],
+                linestyle=line_styles[ratio_index % len(line_styles)],
+                linewidth=1.8,
+                alpha=0.9,
+                label=f"{quantity} tr={throat_ratio:.2f} @ x={x[point_index]:.2f}",
+            )
+
     ax.set_xlabel("epoch")
     ax.set_ylabel(quantity)
-    ax.set_title(f"centerline {quantity}")
-    ax.legend()
-    plt.grid()
-    plt.savefig(f"results/centerline_{quantity}.png", dpi=200)
+    ax.set_title(
+        f"centerline {quantity} for throat ratios {', '.join(f'{r:.2f}' for r in throat_ratios)}"
+    )
+    ax.grid(True)
+    ax.legend(loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=8)
+    plt.tight_layout()
+    plt.savefig(f"results/centerline_{quantity}_all_ratios.pdf", dpi=200)
     plt.show()
-    fo.close()
 
 
 def plot_loss_history():

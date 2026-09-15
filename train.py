@@ -14,8 +14,8 @@ torch.set_default_dtype(torch.float32)
 # Training parameters
 # --------------------------------------------------------------------------
 
-EPOCHS = 10000
-LEARNING_RATE = 1.0e-3
+EPOCHS = 20000
+LEARNING_RATE = 2.0e-3
 MODEL_PATH = Path("model/model.pth")
 
 
@@ -44,24 +44,22 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
     # For monitoring centerline velocity:
     predictor = Predictor(model=model, device=DEVICE)
     x_centerline = centerline_points(n_points=7)
-    fo_velocity = open("results/centerline_velocity.txt", "w")
-    fo_massflow = open("results/centerline_massflow.txt", "w")
-    fo_rho = open("results/centerline_rho.txt", "w")
-    fo_p = open("results/centerline_p.txt", "w")
     fo_loss = open("results/loss_history.txt", "w")
 
-    for xi in x_centerline:
-        fo_velocity.write(f"{xi[0].item():.6f} ")
-    fo_velocity.write("\n")
-    for xi in x_centerline:
-        fo_massflow.write(f"{xi[0].item():.6f} ")
-    fo_massflow.write("\n")
-    for xi in x_centerline:
-        fo_rho.write(f"{xi[0].item():.6f} ")
-    fo_rho.write("\n")
-    for xi in x_centerline:
-        fo_p.write(f"{xi[0].item():.6f} ")
-    fo_p.write("\n")
+    ratio_files = {}
+    for throat_ratio in (0.2, 0.3, 0.4):
+        ratio_label = f"tr{int(throat_ratio * 100):02d}"
+        ratio_files[throat_ratio] = {
+            "velocity": open(f"results/centerline_velocity_{ratio_label}.txt", "w"),
+            "massflow": open(f"results/centerline_massflow_{ratio_label}.txt", "w"),
+            "rho": open(f"results/centerline_rho_{ratio_label}.txt", "w"),
+            "p": open(f"results/centerline_p_{ratio_label}.txt", "w"),
+        }
+        for key in ("velocity", "massflow", "rho", "p"):
+            for xi in x_centerline:
+                ratio_files[throat_ratio][key].write(f"{xi[0].item():.6f} ")
+            ratio_files[throat_ratio][key].write("\n")
+
     for key in history:
         fo_loss.write(f"{key} ")
     fo_loss.write("\n")
@@ -127,42 +125,43 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
             )
 
             # if epoch % 1 == 0 or epoch == epochs - 1:
-            rho, velocity_magnitude, p = monitor_centerline_velocity_rho_p(
-                predictor, throat_ratio=0.3, x_centerline=x_centerline
-            )
-            for vi in velocity_magnitude:
-                fo_velocity.write(f"{vi[0].item():.6f} ")
-            fo_velocity.write("\n")
-            fo_velocity.flush()
+            for throat_ratio, files in ratio_files.items():
+                rho_tr, velocity_magnitude_tr, p_tr = monitor_centerline_velocity_rho_p(
+                    predictor, throat_ratio=throat_ratio, x_centerline=x_centerline
+                )
+                massflow_tr = monitor_crosssectional_massflow(
+                    predictor, throat_ratio=throat_ratio, x_centerline=x_centerline
+                )
 
-            massflow = monitor_crosssectional_massflow(
-                predictor, throat_ratio=0.3, x_centerline=x_centerline
-            )
-            for value in massflow:
-                fo_massflow.write(f"{value[0].item():.6f} ")
-            fo_massflow.write("\n")
-            fo_massflow.flush()
+                for vi in velocity_magnitude_tr:
+                    files["velocity"].write(f"{vi[0].item():.6f} ")
+                files["velocity"].write("\n")
+                files["velocity"].flush()
 
-            for value in rho:
-                fo_rho.write(f"{value[0].item():.6f} ")
-            fo_rho.write("\n")
-            fo_rho.flush()
+                for value in massflow_tr:
+                    files["massflow"].write(f"{value[0].item():.6f} ")
+                files["massflow"].write("\n")
+                files["massflow"].flush()
 
-            for value in p:
-                fo_p.write(f"{value[0].item():.6f} ")
-            fo_p.write("\n")
-            fo_p.flush()
+                for value in rho_tr:
+                    files["rho"].write(f"{value[0].item():.6f} ")
+                files["rho"].write("\n")
+                files["rho"].flush()
+
+                for value in p_tr:
+                    files["p"].write(f"{value[0].item():.6f} ")
+                files["p"].write("\n")
+                files["p"].flush()
 
             for key in history:
                 fo_loss.write(f"{history[key][-1]:.6e} ")
             fo_loss.write("\n")
             fo_loss.flush()
 
-    fo_velocity.close()
-    fo_massflow.close()
-    fo_rho.close()
-    fo_p.close()
     fo_loss.close()
+    for files in ratio_files.values():
+        for handle in files.values():
+            handle.close()
     if MODEL_PATH.exists():
         model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
 
