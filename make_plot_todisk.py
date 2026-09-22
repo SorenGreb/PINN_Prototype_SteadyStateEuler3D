@@ -17,7 +17,7 @@ def plot_longitudinal_velocity(
     theta_location: float = 0.0,
     n_x: int = 120,
     n_radius: int = 220,
-    cmap: str = "rainbow",
+    cmap: str = "gist_stern",
     throat_ratio: float = 0.30,
 ):
     points, xx, r = longitudinal_slice(
@@ -27,9 +27,20 @@ def plot_longitudinal_velocity(
     _, u, v, w, _ = predictor.predict(points, throat_ratio=throat_ratio)
     velocity = predictor.velocity_magnitude(u, v, w).view(n_x, n_radius).cpu().numpy()
 
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=(10, 5), facecolor="white")
+    ax.set_facecolor("gray")
+    # vmin = float(np.nanmin(velocity))
+    # vmax = float(np.nanmax(velocity))
+    vmin = 0.0
+    vmax = 2.0
     mesh = ax.pcolormesh(
-        xx.cpu().numpy(), r.cpu().numpy(), velocity, shading="auto", cmap=cmap
+        xx.cpu().numpy(),
+        r.cpu().numpy(),
+        velocity,
+        shading="auto",
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
     )
     ax.set_title(
         f"Velocity magnitude in longitudinal slice at θ={theta_location} rad, "
@@ -37,7 +48,12 @@ def plot_longitudinal_velocity(
     )
     ax.set_xlabel("x")
     ax.set_ylabel("radial distance")
+    # ax.set_xlim(float(xx.min().cpu().numpy()), float(xx.max().cpu().numpy()))
+    # ax.set_ylim(float(r.min().cpu().numpy()), float(r.max().cpu().numpy()))
+    ax.set_xlim(0, 6)
+    ax.set_ylim(0, 0.55)
     fig.colorbar(mesh, ax=ax, label="Velocity magnitude")
+    plt.grid()
 
     fig.tight_layout()
     fig.savefig(str(output_path), dpi=200)
@@ -148,6 +164,7 @@ def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
                 label=f"{quantity} tr={throat_ratio:.2f} @ x={x[point_index]:.2f}",
             )
 
+    ax.set_xscale("log")
     ax.set_xlabel("epoch")
     ax.set_ylabel(quantity)
     ax.set_title(
@@ -174,6 +191,7 @@ def plot_loss_history():
     fig, ax = plt.subplots(figsize=(10, 5))
     for i in range(x.__len__()):
         ax.plot(y[:, i], label=f"{x[i]}")
+    ax.set_xscale("log")
     ax.set_xlabel("epoch")
     ax.set_ylabel("loss")
     ax.set_title(f"loss history")
@@ -196,9 +214,10 @@ def main():
 
     throat_ratio = 0.20
 
-    output_path = output_dir / "delaval_pinn_slice.png"
+    output_path = output_dir / f"delaval_pinn_slice_{throat_ratio:.2f}.pdf"
     plot_longitudinal_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
+    """
     output_path = output_dir / f"delaval_pinn_surf_{throat_ratio:.2f}.png"
     plot_nozzle_surface_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
@@ -207,6 +226,7 @@ def main():
     plot_centerline_quantity(quantity="rho")
     plot_centerline_quantity(quantity="p")
     plot_loss_history()
+    """
 
 
 if __name__ == "__main__":
