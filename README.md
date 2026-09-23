@@ -22,7 +22,7 @@ $$
 \nabla \cdot (\rho 𝐮) = 0,
 $$
 $$
-\nabla \cdot (\rho 𝐮 𝐮 + p \mathbf{I}) = 0,
+\nabla \cdot (\rho 𝐮 \otimes 𝐮 + p \mathbf{I}) = 0,
 $$
 $$
 \nabla \cdot [(E+p) 𝐮] = 0,
