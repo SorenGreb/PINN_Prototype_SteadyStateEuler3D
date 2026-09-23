@@ -155,4 +155,4 @@ Then open your browser to `http://localhost:8001` to view the live dashboard.
 
 - The PINN training requires automatic differentiation through the neural network, which is handled by PyTorch.
 - GPU acceleration is supported but has not been tested due to limitations of the present machine.
-- The current default setting regarding the number of epochs is 20000. Without GPU acceleration, training takes a considerable amount of time. For quick testing purposes, the number of epochs can be reduced considerably.
+- The current default setting regarding the number of epochs is 20000. Without GPU acceleration, training takes a considerable amount of time. For quick testing purposes, the number of epochs can be reduced by at least a factor of 10.
