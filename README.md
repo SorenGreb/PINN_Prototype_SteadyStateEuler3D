@@ -123,7 +123,7 @@ To train the model:
 python TRAIN/train.py
 ```
 
-This will train the PINN and save the model to `model/model.pth`. Alternatively, you can skip the training step and proceed with the pre-trained PINN `model_pretrained/model.pth`. To do so, copy the pre-trained model into `model/`.
+This will train the PINN and save the model to `model/model.pth`. Alternatively, you can skip the training step and proceed with the pre-trained PINN `model_pretrained/model.pth`. To do so, copy the pre-trained model into `model/`. The network and training parameters, such as layers, dimensions, learning rate, epochs, optimizer, etc., are specified in `TRAIN/train.py`.
 
 ### Generating plots
 
@@ -155,3 +155,4 @@ Then open your browser to `http://localhost:8001` to view the live dashboard.
 
 - The PINN training requires automatic differentiation through the neural network, which is handled by PyTorch.
 - GPU acceleration is supported but has not been tested due to limitations of the present machine.
+- The current default setting regarding the number of epochs is 20000. Without GPU acceleration, training takes a considerable amount of time. For quick testing purposes, the number of epochs can be reduced considerably.
