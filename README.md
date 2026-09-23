@@ -14,7 +14,7 @@ This repository implements a physics-informed neural network in PyTorch for the 
 ---
 
 
-## Physical setup
+## Physical set-up
 
 The flow is modeled as steady, compressible, and inviscid through an axisymmetric Laval nozzle. The network learns the primitive variables density ($\rho$), velocity components ($u$, $v$, $w$), and pressure ($p$) from the conserved-variable form of the Euler equations:
 
@@ -51,6 +51,8 @@ where $E$ is the total specific energy. The nozzle geometry is parametrized by t
 │   └── flow_quantities.py       # Flow and thermodynamic quantities
 ├── DIRS/
 │   └── dirs.py                  # Project directory and model-path definitions
+├── DOC/
+│   └── PINN_description.pdf     # Documentation providing a detailed description of the PINN
 ├── GEOMETRY/
 │   ├── collocate.py             # Collocation-point generation
 │   ├── geometry.py              # Laval-nozzle geometry
@@ -67,10 +69,10 @@ where $E$ is the total specific energy. The nozzle geometry is parametrized by t
 │   ├── retrain.py               # Model retraining entry point
 │   └── train.py                 # Training CLI entry point
 ├── model/
-│   └── model.pth                # Current trained model checkpoint
+│   └── model.pth                # Current trained model checkpoint (see DIRS/dirs.py)
 ├── model_pretrained/
 │   └── model.pth                # Pretrained model checkpoint
-├── results/                     # Generated training and probe results
+├── results/                     # Generated training and probe results (see DIRS/dirs.py)
 └── README.md                    # This file
 ```
 
