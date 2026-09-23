@@ -201,7 +201,7 @@ def plot_loss_history():
     ax.set_yscale("log")
     ax.legend()
     plt.grid()
-    plt.savefig(f"{RESULTS_DIR}/loss_history.png", dpi=200)
+    plt.savefig(f"{RESULTS_DIR}/loss_history.pdf", dpi=200)
     plt.show()
     fo.close()
 
@@ -214,12 +214,12 @@ def main():
 
     RESULTS_DIR.mkdir(exist_ok=True)
 
-    throat_ratio = 0.20
+    throat_ratio = 0.40
 
     output_path = RESULTS_DIR / f"delaval_pinn_slice_{throat_ratio:.2f}.pdf"
     plot_longitudinal_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
-    output_path = RESULTS_DIR / f"delaval_pinn_surf_{throat_ratio:.2f}.png"
+    output_path = RESULTS_DIR / f"delaval_pinn_surf_{throat_ratio:.2f}.pdf"
     plot_nozzle_surface_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
     plot_centerline_quantity(quantity="velocity")
