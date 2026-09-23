@@ -16,6 +16,7 @@
             --panel-border: #374151;
             --text: #e5e7eb;
             --muted: #9ca3af;
+            --scene-height: min(760px, 80vh);
         }
 
         * { box-sizing: border-box; }
@@ -60,7 +61,7 @@
 
         #vtk-container {
             width: 100%;
-            height: min(760px, 80vh);
+            height: var(--scene-height);
             margin: 0;
             border: 1px solid var(--panel-border);
             border-radius: 14px;
@@ -80,11 +81,13 @@
 
         .plots-panel {
             display: grid;
+            grid-template-rows: repeat(3, minmax(0, 1fr));
             gap: 12px;
+            height: var(--scene-height);
         }
 
         .plot {
-            height: 238px;
+            height: 100%;
             min-height: 0;
             border: 1px solid var(--panel-border);
             border-radius: 14px;
@@ -98,6 +101,10 @@
             }
 
             #vtk-container {
+                height: min(620px, 75vh);
+            }
+
+            .plots-panel {
                 height: min(620px, 75vh);
             }
         }
@@ -167,7 +174,7 @@
             Plotly.newPlot("centerline-velocity", [], {
                 ...plotLayout,
                 title: "Centerline horizontal velocity",
-                yaxis: { ...plotLayout.yaxis, title: "│u│", automargin: true }
+                yaxis: { ...plotLayout.yaxis, title: "u", automargin: true }
             }, plotConfig);
             Plotly.newPlot("centerline-density", [], {
                 ...plotLayout,
@@ -186,7 +193,7 @@
 
             const x = centerline.x;
             const plots = [
-                ["centerline-velocity", centerline.velocity, "#38bdf8", "Centerline horizontal velocity", "│u│"],
+                ["centerline-velocity", centerline.velocity, "#38bdf8", "Centerline horizontal velocity", "u"],
                 ["centerline-density", centerline.density, "#fbbf24", "Centerline density", "ρ"],
                 ["centerline-pressure", centerline.pressure, "#f87171", "Centerline pressure", "p"]
             ];
