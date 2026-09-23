@@ -7,6 +7,7 @@
     <title>Simulation Dashboard</title>
     <!-- SRC: https://cdn.jsdelivr.net/npm/vtk.js@26.0.0/vtk.js -->
     <script src="lib/vtk-26.0.0.js"></script>
+    <script src="lib/plotly-2.35.2.min.js"></script>
     <style>
         :root {
             color-scheme: dark;
@@ -58,14 +59,47 @@
         }
 
         #vtk-container {
-            width: min(840px, 92vw);
+            width: 100%;
             height: min(760px, 80vh);
-            margin: 0 auto 40px;
+            margin: 0;
             border: 1px solid var(--panel-border);
             border-radius: 14px;
             overflow: hidden;
             background: #0b1220;
             box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .visualization-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.8fr);
+            gap: 18px;
+            width: min(1440px, 94vw);
+            margin: 0 auto 40px;
+            align-items: start;
+        }
+
+        .plots-panel {
+            display: grid;
+            gap: 12px;
+        }
+
+        .plot {
+            height: 238px;
+            min-height: 0;
+            border: 1px solid var(--panel-border);
+            border-radius: 14px;
+            overflow: hidden;
+            background: var(--panel);
+        }
+
+        @media (max-width: 900px) {
+            .visualization-layout {
+                grid-template-columns: 1fr;
+            }
+
+            #vtk-container {
+                height: min(620px, 75vh);
+            }
         }
     </style>
 </head>
@@ -89,7 +123,14 @@
 
     <div id="status">Connecting to simulation...</div>
 
-    <div id="vtk-container"></div>
+    <div class="visualization-layout">
+        <div id="vtk-container"></div>
+        <div class="plots-panel">
+            <div id="centerline-velocity" class="plot"></div>
+            <div id="centerline-density" class="plot"></div>
+            <div id="centerline-pressure" class="plot"></div>
+        </div>
+    </div>
 
     <script>
         const WS_URL = "ws://localhost:8000/graph-stream";
@@ -98,6 +139,75 @@
         const status = document.getElementById("status");
         const slider = document.getElementById("throat_ratioSlider");
         const valueDisplay = document.getElementById("throat_ratioValue");
+
+        const plotLayout = {
+            paper_bgcolor: "#1f2937",
+            plot_bgcolor: "#111827",
+            font: { color: "#e5e7eb", family: "Arial, sans-serif" },
+            margin: { l: 10, r: 10, t: 50, b: 10 },
+            xaxis: {
+                title: "x",
+                gridcolor: "#374151",
+                zerolinecolor: "#4b5563",
+                automargin: true
+            },
+            yaxis: {
+                gridcolor: "#374151",
+                zerolinecolor: "#4b5563",
+                automargin: true
+            },
+            showlegend: false,
+            hovermode: "x unified",
+            autosize: true
+        };
+
+        const plotConfig = { responsive: true, displaylogo: false };
+
+        function createCenterlinePlots() {
+            Plotly.newPlot("centerline-velocity", [], {
+                ...plotLayout,
+                title: "Centerline horizontal velocity",
+                yaxis: { ...plotLayout.yaxis, title: "│u│", automargin: true }
+            }, plotConfig);
+            Plotly.newPlot("centerline-density", [], {
+                ...plotLayout,
+                title: "Centerline density",
+                yaxis: { ...plotLayout.yaxis, title: "ρ", automargin: true }
+            }, plotConfig);
+            Plotly.newPlot("centerline-pressure", [], {
+                ...plotLayout,
+                title: "Centerline pressure",
+                yaxis: { ...plotLayout.yaxis, title: "p", automargin: true }
+            }, plotConfig);
+        }
+
+        function updateCenterlinePlots(centerline) {
+            if (!centerline) return;
+
+            const x = centerline.x;
+            const plots = [
+                ["centerline-velocity", centerline.velocity, "#38bdf8", "Centerline horizontal velocity", "│u│"],
+                ["centerline-density", centerline.density, "#fbbf24", "Centerline density", "ρ"],
+                ["centerline-pressure", centerline.pressure, "#f87171", "Centerline pressure", "p"]
+            ];
+
+            for (const [id, y, color, title, yTitle] of plots) {
+                Plotly.react(
+                    id,
+                    [{ x, y, mode: "lines", line: { color, width: 1.5 } }],
+                    {
+                        ...plotLayout,
+                        title,
+                        paper_bgcolor: "#1f2937",
+                        plot_bgcolor: "#111827",
+                        yaxis: { ...plotLayout.yaxis, title: yTitle, automargin: true }
+                    },
+                    plotConfig
+                );
+            }
+        }
+
+        createCenterlinePlots();
 
         const vtk = window.vtk;
 
@@ -339,6 +449,7 @@
             status.innerHTML = "Receiving simulation data";
             status.style.color = "#34d399";
             updateScene(frame);
+            updateCenterlinePlots(frame.centerline);
         };
 
         socket.onerror = function (error) {

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from PINN.pinn import DEVICE
 from GEOMETRY.geometry import nozzle_radius, L_TOTAL
-from GEOMETRY.probes import nozzle_surface_points
+from GEOMETRY.probes import centerline_points, nozzle_surface_points
 from PINN.predictor import Predictor
 
 
@@ -250,6 +250,11 @@ def generate_surface_velocity_data(
     _, u, v, w, _ = predictor.predict(points, throat_ratio=throat_ratio)
     velocity = predictor.velocity_magnitude(u, v, w)
     velocity = velocity.view(xx.shape[0], xx.shape[1]).cpu()
+
+    centerline = centerline_points()
+    rho_centerline, u_centerline, _, _, p_centerline = predictor.predict(
+        centerline, throat_ratio=throat_ratio
+    )
     dt = 0.5
     particle_system.inject(dt)
     particle_system.advect(velocity_magnitude=velocity, dt=dt)
@@ -258,5 +263,11 @@ def generate_surface_velocity_data(
     return {
         "geometry": {"x": xx.tolist(), "y": yy.tolist(), "z": zz.tolist()},
         "velocity": {"magnitude": velocity.tolist()},
+        "centerline": {
+            "x": centerline[:, 0].detach().cpu().tolist(),
+            "velocity": u_centerline[:, 0].detach().cpu().tolist(),
+            "density": rho_centerline[:, 0].detach().cpu().tolist(),
+            "pressure": p_centerline[:, 0].detach().cpu().tolist(),
+        },
         "particles": {"positions": particle_system.positions().tolist()},
     }
