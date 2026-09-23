@@ -59,7 +59,7 @@ where $E$ is the total specific energy. The nozzle geometry is parametrized by t
 │   └── probes.py                --> Centerline, slice, and surface probes
 ├── MISC/
 │   ├── calc_ref_states.py       --> Reference-state calculations
-│   └── make_plot_todisk.py      --> Static plot export to disk
+│   └── plot_todisk.py           --> Static plot export to disk
 ├── PINN/
 │   ├── derivatives.py           --> Automatic-differentiation helpers
 │   ├── pinn.py                  --> PINN architecture and physics-informed loss
@@ -130,7 +130,7 @@ This will train the PINN and save the model to `model/model.pth`. Alternatively,
 To generate static velocity plots and save them to the `results/` directory:
 
 ```bash
-python MISC/make_plot_todisk.py
+python MISC/plot_todisk.py
 ```
 
 ### Running the live dashboard
