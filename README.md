@@ -1,14 +1,14 @@
 # PINN Prototype: Compressible Flow Through a Laval Nozzle
 
-This repository implements a physics-informed neural network for the steady compressible flow through an axisymmetric Laval nozzle using the compressible Euler equations.
+This repository implements a physics-informed neural network in PyTorch for the steady compressible flow through an axisymmetric Laval nozzle using the compressible Euler equations.
 
 ---
 
 ## What the project does
 
-- Trains a PINN to solve the steady compressible Euler equations in a Laval nozzle
+- Trains a PINN to solve the steady compressible Euler equations in a Laval nozzle with variable geometry
 - Enforces conservation laws through physics-informed loss terms
-- Generates static velocity-magnitude plots for multiple nozzle geometries
+- Generates various plots
 - Serves a small FastAPI/WebSocket dashboard for live visualization
 
 ---
@@ -41,16 +41,37 @@ where $E$ is the total specific energy. The nozzle geometry is parametrized by t
 
 ```text
 .
-├── api.py                      # FastAPI app and WebSocket streaming endpoint
-├── get_stream_data.py          # Simulation data generation in JSON format
-├── index.html                  # Simple browser-based dashboard
-├── make_plot_todisk.py         # Static plot export to disk
-├── pinn.py                     # PINN architecture, collocation points, and training loop
-├── predictor.py                # Inference wrapper around the trained model
-├── train.py                    # Training CLI entry point
-├── model/                      # PINN model will be written here
-├── results/                    # Output plots
-└── README.md                   # This file
+├── APP/
+│   ├── api.py                   # FastAPI app and WebSocket streaming endpoint
+│   ├── get_stream_data.py       # Simulation data generation in JSON format
+│   ├── index.html               # Browser-based live dashboard
+│   └── lib/                     # Local VTK.js and Plotly JavaScript libraries
+├── CONDITIONS/
+│   ├── boundary_conditions.py   # Inlet, wall, and outlet conditions
+│   └── flow_quantities.py       # Flow and thermodynamic quantities
+├── DIRS/
+│   └── dirs.py                  # Project directory and model-path definitions
+├── GEOMETRY/
+│   ├── collocate.py             # Collocation-point generation
+│   ├── geometry.py              # Laval-nozzle geometry
+│   └── probes.py                # Centerline, slice, and surface probes
+├── MISC/
+│   ├── calc_ref_states.py       # Reference-state calculations
+│   └── make_plot_todisk.py      # Static plot export to disk
+├── PINN/
+│   ├── derivatives.py           # Automatic-differentiation helpers
+│   ├── pinn.py                  # PINN architecture and physics-informed loss
+│   └── predictor.py             # Inference wrapper around the trained model
+├── TRAIN/
+│   ├── monitor.py               # Training monitoring utilities
+│   ├── retrain.py               # Model retraining entry point
+│   └── train.py                 # Training CLI entry point
+├── model/
+│   └── model.pth                # Current trained model checkpoint
+├── model_pretrained/
+│   └── model.pth                # Pretrained model checkpoint
+├── results/                     # Generated training and probe results
+└── README.md                    # This file
 ```
 
 ---
@@ -97,7 +118,7 @@ pip install torch numpy matplotlib fastapi "uvicorn[standard]" pydantic
 To train the model:
 
 ```bash
-python train.py
+python TRAIN/train.py
 ```
 
 This will train the PINN and save the model to `model/model.pth`.
@@ -107,7 +128,7 @@ This will train the PINN and save the model to `model/model.pth`.
 To generate static velocity plots and save them to the `results/` directory:
 
 ```bash
-python make_plot_todisk.py
+python MISC/make_plot_todisk.py
 ```
 
 ### Running the live dashboard
@@ -131,6 +152,4 @@ Then open your browser to `http://localhost:8001` to view the live dashboard.
 ## Notes
 
 - The PINN training requires automatic differentiation through the neural network, which is handled by PyTorch.
-- GPU acceleration is supported and recommended for faster training.
-- The model checkpoints are saved in the `model/` directory.
-- Visualization outputs are stored in the `results/` directory.
+- GPU acceleration is supported but has not been tested due to limitations of the present machine.
