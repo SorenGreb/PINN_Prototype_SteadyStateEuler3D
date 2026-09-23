@@ -174,7 +174,7 @@
             Plotly.newPlot("centerline-velocity", [], {
                 ...plotLayout,
                 title: "Centerline horizontal velocity",
-                yaxis: { ...plotLayout.yaxis, title: "u", automargin: true }
+                yaxis: { ...plotLayout.yaxis, title: "Ux", automargin: true }
             }, plotConfig);
             Plotly.newPlot("centerline-density", [], {
                 ...plotLayout,
@@ -193,7 +193,7 @@
 
             const x = centerline.x;
             const plots = [
-                ["centerline-velocity", centerline.velocity, "#38bdf8", "Centerline horizontal velocity", "u"],
+                ["centerline-velocity", centerline.velocity, "#38bdf8", "Centerline horizontal velocity", "Ux"],
                 ["centerline-density", centerline.density, "#fbbf24", "Centerline density", "ρ"],
                 ["centerline-pressure", centerline.pressure, "#f87171", "Centerline pressure", "p"]
             ];
@@ -226,6 +226,7 @@
         const vtkCellArray = vtk.Common.Core.vtkCellArray;
         const vtkDataArray = vtk.Common.Core.vtkDataArray;
         const vtkLookupTable = vtk.Common.Core.vtkLookupTable;
+        const vtkScalarBarActor = vtk.Rendering.Core.vtkScalarBarActor;
 
         const vtkSphereSource = vtk.Filters.Sources.vtkSphereSource;
 
@@ -258,6 +259,16 @@
 
         lookupTable.build();
         mapper.setLookupTable(lookupTable);
+
+        const scalarBar = vtkScalarBarActor.newInstance();
+        scalarBar.setScalarsToColors(lookupTable);
+        scalarBar.setAxisLabel("|U|");
+        scalarBar.setAxisTextStyle({ fontFamily: "Arial" });
+        scalarBar.setTickTextStyle({ fontFamily: "Arial" });
+        scalarBar.setDrawNanAnnotation(false);
+        scalarBar.setBoxPosition([0.85, 0.12]);
+        scalarBar.setBoxSize([0.10, 0.75]);
+        renderer.addActor2D(scalarBar);
 
         const actor = vtkActor.newInstance();
         actor.setMapper(mapper);
