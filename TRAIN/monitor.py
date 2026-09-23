@@ -1,7 +1,7 @@
 import torch
 
-from predictor import Predictor
-from probes import radial_slice
+from PINN.predictor import Predictor
+from GEOMETRY.probes import radial_slice
 
 
 def monitor_centerline_velocity_rho_p(

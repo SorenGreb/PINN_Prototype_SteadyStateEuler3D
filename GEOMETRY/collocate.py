@@ -1,14 +1,14 @@
 import math
 import torch
 
-from pinn import DEVICE
-from geometry import (
+from PINN.pinn import DEVICE
+from GEOMETRY.geometry import (
     TARGET_EXIT_MACH,
     nozzle_radius,
     throat_radius,
     exit_radius,
 )
-from geometry import L_TOTAL, R_INLET
+from GEOMETRY.geometry import L_TOTAL, R_INLET
 
 torch.set_default_dtype(torch.float32)
 

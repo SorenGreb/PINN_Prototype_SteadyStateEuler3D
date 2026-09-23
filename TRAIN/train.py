@@ -2,11 +2,15 @@ from pathlib import Path
 from torch import nn
 import torch
 
-from pinn import PINN, total_loss, DEVICE
-from collocate import assemble_collocation_points
-from predictor import Predictor
-from monitor import monitor_crosssectional_massflow, monitor_centerline_velocity_rho_p
-from probes import centerline_points
+from PINN.pinn import PINN, total_loss, DEVICE
+from PINN.predictor import Predictor
+from GEOMETRY.collocate import assemble_collocation_points
+from GEOMETRY.probes import centerline_points
+from TRAIN.monitor import (
+    monitor_crosssectional_massflow,
+    monitor_centerline_velocity_rho_p,
+)
+from DIRS.dirs import MODEL_PATH
 
 torch.set_default_dtype(torch.float32)
 
@@ -16,7 +20,6 @@ torch.set_default_dtype(torch.float32)
 
 EPOCHS = 20000
 LEARNING_RATE = 2.0e-3
-MODEL_PATH = Path("model/model.pth")
 
 
 def train_pinn(model: nn.Module, epochs: int = EPOCHS):

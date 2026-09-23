@@ -3,10 +3,11 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pinn import PINN, DEVICE
-from probes import nozzle_surface_points, longitudinal_slice
-from train import MODEL_PATH
-from predictor import Predictor
+from PINN.pinn import PINN, DEVICE
+from PINN.predictor import Predictor
+from GEOMETRY.probes import nozzle_surface_points, longitudinal_slice
+from TRAIN.train import MODEL_PATH
+from DIRS.dirs import RESULTS_DIR
 
 torch.set_default_dtype(torch.float32)
 
@@ -138,7 +139,9 @@ def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
     fig, ax = plt.subplots(figsize=(10, 5))
 
     for ratio_index, throat_ratio in enumerate(throat_ratios):
-        file_name = f"results/centerline_{quantity}_tr{int(throat_ratio * 100):02d}.txt"
+        file_name = (
+            f"{RESULTS_DIR}/centerline_{quantity}_tr{int(throat_ratio * 100):02d}.txt"
+        )
         try:
             with open(file_name, "r") as fo:
                 lines = fo.readlines()
@@ -173,12 +176,12 @@ def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
     ax.grid(True)
     ax.legend(loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=8)
     plt.tight_layout()
-    plt.savefig(f"results/centerline_{quantity}_all_ratios.pdf", dpi=200)
+    plt.savefig(f"{RESULTS_DIR}/centerline_{quantity}_all_ratios.pdf", dpi=200)
     plt.show()
 
 
 def plot_loss_history():
-    fo = open(f"results/loss_history.txt", "r")
+    fo = open(f"{RESULTS_DIR}/loss_history.txt", "r")
     lines = fo.readlines()
     count = 0
     y = np.zeros((len(lines) - 1, len(lines[0].strip().split())))
@@ -198,7 +201,7 @@ def plot_loss_history():
     ax.set_yscale("log")
     ax.legend()
     plt.grid()
-    plt.savefig(f"results/loss_history.png", dpi=200)
+    plt.savefig(f"{RESULTS_DIR}/loss_history.png", dpi=200)
     plt.show()
     fo.close()
 
@@ -209,16 +212,14 @@ def main():
     model.load_state_dict(checkpoint)
     predictor = Predictor(model=model, device=DEVICE)
 
-    output_dir = Path(__file__).resolve().parent / "results"
-    output_dir.mkdir(exist_ok=True)
+    RESULTS_DIR.mkdir(exist_ok=True)
 
     throat_ratio = 0.20
 
-    output_path = output_dir / f"delaval_pinn_slice_{throat_ratio:.2f}.pdf"
+    output_path = RESULTS_DIR / f"delaval_pinn_slice_{throat_ratio:.2f}.pdf"
     plot_longitudinal_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
-    """
-    output_path = output_dir / f"delaval_pinn_surf_{throat_ratio:.2f}.png"
+    output_path = RESULTS_DIR / f"delaval_pinn_surf_{throat_ratio:.2f}.png"
     plot_nozzle_surface_velocity(predictor, output_path, throat_ratio=throat_ratio)
 
     plot_centerline_quantity(quantity="velocity")
@@ -226,7 +227,6 @@ def main():
     plot_centerline_quantity(quantity="rho")
     plot_centerline_quantity(quantity="p")
     plot_loss_history()
-    """
 
 
 if __name__ == "__main__":

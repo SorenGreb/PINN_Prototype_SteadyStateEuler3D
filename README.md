@@ -115,13 +115,13 @@ python make_plot_todisk.py
 In one terminal, start the FastAPI server:
 
 ```bash
-python -m uvicorn api:app --host 127.0.0.1 --port 8000
+python -m uvicorn APP.api:app --host 127.0.0.1 --port 8000
 ```
 
 In another terminal, start a simple HTTP server to serve the frontend:
 
 ```bash
-python -m http.server 8001
+python -m http.server 8001 --directory ./APP
 ```
 
 Then open your browser to `http://localhost:8001` to view the live dashboard.

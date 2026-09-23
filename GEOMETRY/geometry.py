@@ -1,7 +1,8 @@
 import math
 import torch
 
-from flow_quantities import GAMMA
+from CONDITIONS.flow_quantities import GAMMA
+from CONDITIONS.boundary_conditions import P_INLET, RHO_INLET
 
 torch.set_default_dtype(torch.float32)
 
@@ -27,8 +28,6 @@ def inlet_speed_for_sonic_throat(throat_radius: float) -> float:
     boundary conditions. The returned speed makes the isentropic mass flow at
     the inlet equal to the choked mass flow through the supplied throat area.
     """
-
-    from boundary_conditions import P_INLET, RHO_INLET
 
     if throat_radius <= 0.0 or throat_radius > R_INLET:
         raise ValueError("throat_radius must be greater than 0 and at most R_INLET")
@@ -63,8 +62,6 @@ def inlet_speed_for_sonic_throat(throat_radius: float) -> float:
 
 def sonic_throat_state(throat_radius: float) -> tuple[float, float, float]:
     """Return sonic throat density, axial speed, and pressure."""
-
-    from boundary_conditions import P_INLET, RHO_INLET
 
     inlet_sound_speed = math.sqrt(GAMMA * P_INLET / RHO_INLET)
     inlet_speed = inlet_speed_for_sonic_throat(throat_radius)

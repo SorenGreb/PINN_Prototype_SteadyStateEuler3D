@@ -1,12 +1,12 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-
 import asyncio
 import torch
 
-from pinn import PINN
-from predictor import Predictor
-from get_stream_data import generate_surface_velocity_data
+from PINN.pinn import PINN
+from PINN.predictor import Predictor
+from APP.get_stream_data import generate_surface_velocity_data
+from DIRS.dirs import MODEL_PATH
 
 # ---------------------------------------------------------
 # Device
@@ -20,7 +20,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # ---------------------------------------------------------
 
 model = PINN(hidden_dim=64, n_layers=2).to(DEVICE)
-checkpoint = torch.load("model/model.pth", map_location=DEVICE)
+checkpoint = torch.load(MODEL_PATH, map_location=DEVICE)
 model.load_state_dict(checkpoint)
 model.eval()
 

@@ -2,10 +2,10 @@ import torch
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-from pinn import DEVICE
-from geometry import nozzle_radius, L_TOTAL
-from probes import nozzle_surface_points
-from predictor import Predictor
+from PINN.pinn import DEVICE
+from GEOMETRY.geometry import nozzle_radius, L_TOTAL
+from GEOMETRY.probes import nozzle_surface_points
+from PINN.predictor import Predictor
 
 
 from dataclasses import dataclass

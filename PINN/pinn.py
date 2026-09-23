@@ -3,7 +3,7 @@ from torch import nn
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.set_default_dtype(torch.float32)
-from geometry import (
+from GEOMETRY.geometry import (
     L_CONV,
     L_TOTAL,
     R_INLET,
@@ -15,8 +15,8 @@ from geometry import (
     throat_radius,
 )
 
-from derivatives import gradient, divergence
-from boundary_conditions import (
+from PINN.derivatives import gradient, divergence
+from CONDITIONS.boundary_conditions import (
     RHO_INLET,
     V_INLET,
     W_INLET,
@@ -24,8 +24,8 @@ from boundary_conditions import (
     P_OUTLET,
     FIXED_OUTLET_P_BC,
 )
-from geometry import wall_normal
-from flow_quantities import GAMMA
+from GEOMETRY.geometry import wall_normal
+from CONDITIONS.flow_quantities import GAMMA
 
 # ==========================================================================
 # Physics-Informed Neural Network

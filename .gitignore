@@ -1,5 +1,5 @@
 __pycache__
-results*
-*.ps1
 .venv
+results*
+notes*
 model/
