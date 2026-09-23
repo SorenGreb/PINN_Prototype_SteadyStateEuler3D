@@ -19,7 +19,7 @@ This repository implements a physics-informed neural network for the steady comp
 The flow is modeled as steady, compressible, and inviscid through an axisymmetric Laval nozzle. The network learns the primitive variables density ($\rho$), velocity components ($u$, $v$, $w$), and pressure ($p$) from the conserved-variable form of the Euler equations:
 
 $$
-\nabla \cdot (\rho \mathbf{u}) = 0,
+\nabla \cdot (\rho \bold{u}) = 0,
 $$
 $$
 \nabla \cdot (\rho \mathbf{u} \mathbf{u} + p \mathbf{I}) = 0,
