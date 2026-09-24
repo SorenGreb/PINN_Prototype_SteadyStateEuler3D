@@ -116,6 +116,7 @@ pip install torch numpy matplotlib fastapi "uvicorn[standard]" pydantic
 The web-frontend uses VTK and Plotly libraies for interactive rendering and visualization. The source files are located in `APP/lib/`. The original source files are found at:
 
 https://cdn.jsdelivr.net/npm/vtk.js@26.0.0/vtk.js
+
 https://cdn.plot.ly/plotly-2.35.2.min.js
 
 ---
