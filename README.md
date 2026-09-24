@@ -32,7 +32,7 @@ where $E$ is the total specific energy. The nozzle geometry is parametrized by t
 
 **Boundary conditions:**
 - **Inlet:** Uniform primitive variables (density, velocity, pressure)
-- **Wall:** Slip boundary condition ($𝐮 \cdot \mathbf{n} = 0$)
+- **Wall:** Slip boundary condition ($𝐮 \cdot 𝐧 = 0$)
 - **Outlet:** zero-gradient conditions for all primitive variables
 
 ---
