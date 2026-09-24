@@ -45,7 +45,7 @@ where $E$ is the total specific energy. The nozzle geometry is parametrized by t
 │   ├── api.py                   --> FastAPI app and WebSocket streaming endpoint
 │   ├── get_stream_data.py       --> Simulation data generation in JSON format
 │   ├── index.html               --> Browser-based live dashboard
-│   └── lib/                     --> Local VTK.js and Plotly JavaScript libraries
+│   └── lib/                     --> Local VTK and Plotly JavaScript libraries
 ├── CONDITIONS/
 │   ├── boundary_conditions.py   --> Inlet, wall, and outlet conditions
 │   └── flow_quantities.py       --> Flow and thermodynamic quantities
@@ -110,6 +110,13 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 pip install --upgrade pip
 pip install torch numpy matplotlib fastapi "uvicorn[standard]" pydantic
 ```
+
+### 3. JavaScript libraries
+
+The web-frontend uses VTK and Plotly libraies for interactive rendering and visualization. The source files are located in `APP/lib/`. The original source files are found at:
+
+https://cdn.jsdelivr.net/npm/vtk.js@26.0.0/vtk.js
+https://cdn.plot.ly/plotly-2.35.2.min.js
 
 ---
 
