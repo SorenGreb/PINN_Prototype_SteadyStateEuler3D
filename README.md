@@ -1,4 +1,4 @@
-# PINN Prototype: Compressible Flow Through a De Laval Nozzle
+# PINN - Transonic Flow in a De Laval Nozzle
 
 This repository implements a physics-informed neural network in PyTorch for the steady compressible flow through an axisymmetric De Laval nozzle using the compressible Euler equations.
 
