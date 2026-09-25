@@ -1,12 +1,12 @@
-# PINN Prototype: Compressible Flow Through a Laval Nozzle
+# PINN Prototype: Compressible Flow Through a De Laval Nozzle
 
-This repository implements a physics-informed neural network in PyTorch for the steady compressible flow through an axisymmetric Laval nozzle using the compressible Euler equations.
+This repository implements a physics-informed neural network in PyTorch for the steady compressible flow through an axisymmetric De Laval nozzle using the compressible Euler equations.
 
 ---
 
 ## What the project does
 
-- Trains a PINN to solve the steady compressible Euler equations in a Laval nozzle with variable geometry
+- Trains a PINN to solve the steady compressible Euler equations in a De Laval nozzle with variable geometry
 - Enforces conservation laws through physics-informed loss terms
 - Generates various plots
 - Serves a small FastAPI/WebSocket dashboard for live visualization
@@ -16,7 +16,7 @@ This repository implements a physics-informed neural network in PyTorch for the 
 
 ## Physical set-up
 
-The flow is modeled as steady, compressible, and inviscid through an axisymmetric Laval nozzle. The network learns the primitive variables density ($\rho$), velocity components ($u$, $v$, $w$), and pressure ($p$) from the conserved-variable form of the Euler equations:
+The flow is modeled as steady, compressible, and inviscid through an axisymmetric De Laval nozzle. The network learns the primitive variables density ($\rho$), velocity components ($u$, $v$, $w$), and pressure ($p$) from the conserved-variable form of the Euler equations:
 
 $$
 \nabla \cdot (\rho 𝐮) = 0,
@@ -56,7 +56,7 @@ where $E$ is the total specific energy. A calorically perfect gas and isentropic
 │   └── PINN_description.pdf     --> Documentation providing a detailed description of the PINN
 ├── GEOMETRY/
 │   ├── collocate.py             --> Collocation-point generation
-│   ├── geometry.py              --> Laval-nozzle geometry
+│   ├── geometry.py              --> Nozzle geometry
 │   └── probes.py                --> Centerline, slice, and surface probes
 ├── MISC/
 │   ├── calc_ref_states.py       --> Reference-state calculations
