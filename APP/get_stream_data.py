@@ -55,6 +55,10 @@ class SurfaceParticleSystem:
         """
         Inject particles continuously at the inlet.
         injection_rate is particles / second.
+
+        Parameters
+        ----------
+        dt : Physical timestep.
         """
 
         self._injection_remainder += self.injection_rate * dt

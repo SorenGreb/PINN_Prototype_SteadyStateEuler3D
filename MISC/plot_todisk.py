@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from PINN.pinn import PINN, DEVICE
+
+
 from PINN.predictor import Predictor
 from GEOMETRY.probes import nozzle_surface_points, longitudinal_slice
 from TRAIN.train import MODEL_PATH
@@ -34,10 +36,13 @@ def plot_longitudinal_velocity(
     # vmax = float(np.nanmax(velocity))
     vmin = 0.0
     vmax = 2.0
+    # pcolormesh expects the X and Y coordinates to be monotonic in the mesh axes.
+    # Here the longitudinal grid is naturally laid out with x varying along columns
+    # and radial distance varying along rows, so transpose the arrays to match.
     mesh = ax.pcolormesh(
-        xx.cpu().numpy(),
-        r.cpu().numpy(),
-        velocity,
+        xx.T.cpu().numpy(),
+        r.T.cpu().numpy(),
+        velocity.T,
         shading="auto",
         cmap=cmap,
         vmin=vmin,
@@ -58,7 +63,6 @@ def plot_longitudinal_velocity(
 
     fig.tight_layout()
     fig.savefig(str(output_path), dpi=200)
-    plt.show()
 
 
 def plot_nozzle_surface_velocity(
@@ -111,7 +115,6 @@ def plot_nozzle_surface_velocity(
 
     fig.tight_layout()
     fig.savefig(str(output_path), dpi=200)
-    plt.show()
 
 
 def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
@@ -177,7 +180,6 @@ def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
     ax.legend(loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=8)
     plt.tight_layout()
     plt.savefig(f"{RESULTS_DIR}/centerline_{quantity}_all_ratios.pdf", dpi=200)
-    plt.show()
 
 
 def plot_loss_history():
@@ -202,7 +204,7 @@ def plot_loss_history():
     ax.legend()
     plt.grid()
     plt.savefig(f"{RESULTS_DIR}/loss_history.pdf", dpi=200)
-    plt.show()
+
     fo.close()
 
 

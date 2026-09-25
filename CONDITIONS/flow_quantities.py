@@ -3,7 +3,7 @@ import torch
 torch.set_default_dtype(torch.float32)
 
 # --------------------------------------------------------------------------
-# Physical constants
+# Physical constants and quantities
 # --------------------------------------------------------------------------
 
 GAMMA = 1.4

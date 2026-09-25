@@ -397,62 +397,6 @@ def sonic_throat_loss(
     return torch.stack(losses).mean()
 
 
-def axisymmetry_loss(
-    model: nn.Module,
-    throat_ratios: torch.Tensor,
-    n_x: int = 12,
-    n_radius: int = 15,
-    n_theta: int = 20,
-):
-    """Penalize azimuthal variation of the axisymmetric flow variables."""
-
-    x_locations = torch.linspace(
-        0.0, L_TOTAL, n_x, device=throat_ratios.device, dtype=throat_ratios.dtype
-    )
-    normalized_radius = torch.linspace(
-        0.0, 1.0, n_radius, device=throat_ratios.device, dtype=throat_ratios.dtype
-    )
-    angular_coordinate = torch.linspace(
-        0.0,
-        2.0 * torch.pi,
-        n_theta,
-        device=throat_ratios.device,
-        dtype=throat_ratios.dtype,
-    )
-    x, normalized_radius = torch.meshgrid(x_locations, normalized_radius, indexing="ij")
-    theta = angular_coordinate.view(1, 1, -1)
-
-    losses = []
-    for throat_ratio in throat_ratios.reshape(-1):
-        radius = nozzle_radius(x, throat_ratio)
-        radial = normalized_radius * radius
-        x_points = x.unsqueeze(-1).expand(-1, -1, n_theta)
-        y_points = radial.unsqueeze(-1) * torch.cos(theta)
-        z_points = radial.unsqueeze(-1) * torch.sin(theta)
-        ratio_points = torch.ones_like(x_points) * throat_ratio
-        points = torch.stack(
-            [x_points, y_points, z_points, ratio_points], dim=-1
-        ).reshape(-1, 4)
-
-        rho, u, v, w, p = primitive_variables(model, points)
-        shape = (n_x, n_radius, n_theta)
-        rho = rho.reshape(shape)
-        u = u.reshape(shape)
-        p = p.reshape(shape)
-        v = v.reshape(shape)
-        w = w.reshape(shape)
-
-        radial_velocity = v * torch.cos(theta) + w * torch.sin(theta)
-        tangential_velocity = -v * torch.sin(theta) + w * torch.cos(theta)
-        fields = (rho, u, radial_velocity, tangential_velocity, p)
-        for field in fields:
-            azimuthal_mean = field.mean(dim=2, keepdim=True)
-            scale = field.detach().pow(2).mean() + 1.0e-6
-            losses.append(torch.mean((field - azimuthal_mean).pow(2)) / scale)
-
-    return torch.stack(losses).mean()
-
-
 # ==========================================================================
 # Wall boundary condition
 # ==========================================================================

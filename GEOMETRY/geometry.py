@@ -159,6 +159,8 @@ def wall_normal(
         Wall coordinates with shape (N, 3).
     throat_ratio : float
         Throat radius ratio.
+    target_exit_mach: float
+        Target exit Mach number for the nozzle.
 
     Returns
     -------

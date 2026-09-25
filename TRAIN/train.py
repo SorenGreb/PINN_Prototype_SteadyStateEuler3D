@@ -18,7 +18,7 @@ torch.set_default_dtype(torch.float32)
 # Training parameters
 # --------------------------------------------------------------------------
 
-EPOCHS = 20000
+EPOCHS = 20
 LEARNING_RATE = 2.0e-3
 
 
@@ -37,7 +37,6 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
         "pde": [],
         "massflow": [],
         "sonic_throat": [],
-        # "axisymmetry": [],
         "wall": [],
         "inlet": [],
         "outlet": [],
@@ -83,7 +82,6 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
             loss_pde,
             loss_massflow,
             loss_sonic_throat,
-            # loss_axisymmetry,
             loss_wall,
             loss_inlet,
             loss_outlet,
@@ -102,7 +100,6 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
         history["pde"].append(loss_pde.item())
         history["massflow"].append(loss_massflow.item())
         history["sonic_throat"].append(loss_sonic_throat.item())
-        # history["axisymmetry"].append(loss_axisymmetry.item())
         history["wall"].append(loss_wall.item())
         history["inlet"].append(loss_inlet.item())
         history["outlet"].append(loss_outlet.item())
@@ -120,7 +117,6 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
                 f"PDE {loss_pde.item():10.4e} | "
                 f"MassFlow {loss_massflow.item():10.4e} | "
                 f"SonicThroat {loss_sonic_throat.item():10.4e} | "
-                # f"Axisymmetry {loss_axisymmetry.item():10.4e} | "
                 f"Wall {loss_wall.item():10.4e} | "
                 f"Inlet {loss_inlet.item():10.4e} | "
                 f"Outlet {loss_outlet.item():10.4e} | "

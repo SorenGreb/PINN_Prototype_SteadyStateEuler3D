@@ -109,7 +109,7 @@ async def graph_stream(
 
     This endpoint accepts a WebSocket connection, then runs two background
     tasks: a `sender` that periodically computes velocity data via
-    `generate_velocity_data` and sends it to the client, and a `receiver` that
+    `generate_surface_velocity_data` and sends it to the client, and a `receiver` that
     listens for incoming JSON messages to update simulation parameters
     (currently `throat_ratio`). Both tasks run until the client disconnects.
 
@@ -130,6 +130,16 @@ async def graph_stream(
     last_data = None
 
     async def sender():
+        """
+        Receive JSON messages from the WebSocket and update simulation parameters.
+
+        Expected message format for parameter updates:
+        `{"type": "parameterUpdate", "throat_ratio": <value>}`.
+
+        Returns
+        -------
+        None.
+        """
         nonlocal last_throat_ratio, last_data
 
         while True:
