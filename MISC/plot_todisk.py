@@ -8,6 +8,7 @@ from PINN.pinn import PINN, DEVICE
 
 from PINN.predictor import Predictor
 from GEOMETRY.probes import nozzle_surface_points, longitudinal_slice
+from GEOMETRY.geometry import MACH_MAX, MACH_MIN
 from TRAIN.train import MODEL_PATH
 from DIRS.dirs import RESULTS_DIR
 
@@ -22,12 +23,20 @@ def plot_longitudinal_velocity(
     n_radius: int = 220,
     cmap: str = "gist_stern",
     throat_ratio: float = 0.30,
+    *,
+    mach_number: float,
 ):
     points, xx, r = longitudinal_slice(
-        throat_ratio, theta_location, n_x=n_x, n_radius=n_radius
+        throat_ratio,
+        theta_location,
+        n_x=n_x,
+        n_radius=n_radius,
+        mach_number=mach_number,
     )
 
-    _, u, v, w, _ = predictor.predict(points, throat_ratio=throat_ratio)
+    _, u, v, w, _ = predictor.predict(
+        points, throat_ratio=throat_ratio, mach_number=mach_number
+    )
     velocity = predictor.velocity_magnitude(u, v, w).view(n_x, n_radius).cpu().numpy()
 
     fig, ax = plt.subplots(figsize=(10, 5), facecolor="white")
@@ -50,7 +59,7 @@ def plot_longitudinal_velocity(
     )
     ax.set_title(
         f"Velocity magnitude in longitudinal slice at θ={theta_location} rad, "
-        f"throat ratio={throat_ratio:.2f}"
+        f"throat ratio={throat_ratio:.2f}, exit Mach={mach_number:.2f}"
     )
     ax.set_xlabel("x")
     ax.set_ylabel("radial distance")
@@ -72,12 +81,19 @@ def plot_nozzle_surface_velocity(
     n_theta: int = 180,
     cmap: str = "rainbow",
     throat_ratio: float = 0.30,
+    *,
+    mach_number: float,
 ):
     points, xx, yy, zz = nozzle_surface_points(
-        throat_ratio=throat_ratio, n_x=n_x, n_theta=n_theta
+        throat_ratio=throat_ratio,
+        n_x=n_x,
+        n_theta=n_theta,
+        mach_number=mach_number,
     )
 
-    _, u, v, w, _ = predictor.predict(points, throat_ratio=throat_ratio)
+    _, u, v, w, _ = predictor.predict(
+        points, throat_ratio=throat_ratio, mach_number=mach_number
+    )
     velocity = predictor.velocity_magnitude(u, v, w)
     velocity = velocity.view(xx.shape[0], xx.shape[1]).cpu().numpy()
 
@@ -97,7 +113,8 @@ def plot_nozzle_surface_velocity(
         shade=True,
     )
     ax.set_title(
-        f"Velocity magnitude on the nozzle surface (throat ratio={throat_ratio:.2f})"
+        f"Velocity magnitude on the nozzle surface (throat ratio={throat_ratio:.2f}, "
+        f"exit Mach={mach_number:.2f})"
     )
     ax.set_xlabel("x")
     ax.set_ylabel("y")
@@ -117,7 +134,9 @@ def plot_nozzle_surface_velocity(
     fig.savefig(str(output_path), dpi=200)
 
 
-def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
+def plot_centerline_quantity(
+    quantity: str, throat_ratios=(0.2, 0.4), mach_numbers=(2.0, 4.0)
+):
     line_styles = [
         "-",
         "--",
@@ -142,33 +161,38 @@ def plot_centerline_quantity(quantity: str, throat_ratios=(0.2, 0.3, 0.4)):
     fig, ax = plt.subplots(figsize=(10, 5))
 
     for ratio_index, throat_ratio in enumerate(throat_ratios):
-        file_name = (
-            f"{RESULTS_DIR}/centerline_{quantity}_tr{int(throat_ratio * 100):02d}.txt"
-        )
-        try:
-            with open(file_name, "r") as fo:
-                lines = fo.readlines()
-        except FileNotFoundError:
-            continue
-
-        if len(lines) < 2:
-            continue
-
-        x = [float(val) for val in lines[0].strip().split()]
-        y = np.zeros((len(lines) - 1, len(x)))
-        for row_index, line in enumerate(lines[1:]):
-            if line.strip():
-                y[row_index, :] = [float(val) for val in line.strip().split()]
-
-        for point_index in range(len(x)):
-            ax.plot(
-                y[:, point_index],
-                color=line_colors[point_index % len(line_colors)],
-                linestyle=line_styles[ratio_index % len(line_styles)],
-                linewidth=1.5,
-                alpha=1.0,
-                label=f"{quantity} tr={throat_ratio:.2f} @ x={x[point_index]:.2f}",
+        for mach_index, mach_number in enumerate(mach_numbers):
+            file_name = (
+                f"{RESULTS_DIR}/centerline_{quantity}_"
+                f"tr{int(throat_ratio * 100):02d}_ma{mach_number:.2f}.txt"
             )
+            try:
+                with open(file_name, "r") as fo:
+                    lines = fo.readlines()
+            except FileNotFoundError:
+                continue
+
+            if len(lines) < 2:
+                continue
+
+            x = [float(val) for val in lines[0].strip().split()]
+            y = np.zeros((len(lines) - 1, len(x)))
+            for row_index, line in enumerate(lines[1:]):
+                if line.strip():
+                    y[row_index, :] = [float(val) for val in line.strip().split()]
+
+            for point_index in range(len(x)):
+                ax.plot(
+                    y[:, point_index],
+                    color=line_colors[point_index % len(line_colors)],
+                    linestyle=line_styles[ratio_index % len(line_styles)],
+                    linewidth=1.5,
+                    alpha=0.8,
+                    label=(
+                        f"{quantity} tr={throat_ratio:.2f} "
+                        f"M={mach_number:.2f} @ x={x[point_index]:.2f}"
+                    ),
+                )
 
     ax.set_xscale("log")
     ax.set_xlabel("epoch")
@@ -217,12 +241,17 @@ def main():
     RESULTS_DIR.mkdir(exist_ok=True)
 
     throat_ratio = 0.40
+    mach_number = (MACH_MIN + MACH_MAX) / 2.0
 
     output_path = RESULTS_DIR / f"delaval_pinn_slice_{throat_ratio:.2f}.pdf"
-    plot_longitudinal_velocity(predictor, output_path, throat_ratio=throat_ratio)
+    plot_longitudinal_velocity(
+        predictor, output_path, throat_ratio=throat_ratio, mach_number=mach_number
+    )
 
     output_path = RESULTS_DIR / f"delaval_pinn_surf_{throat_ratio:.2f}.pdf"
-    plot_nozzle_surface_velocity(predictor, output_path, throat_ratio=throat_ratio)
+    plot_nozzle_surface_velocity(
+        predictor, output_path, throat_ratio=throat_ratio, mach_number=mach_number
+    )
 
     plot_centerline_quantity(quantity="velocity")
     plot_centerline_quantity(quantity="massflow")

@@ -19,13 +19,22 @@ def centerline_points(n_points=500):
     return torch.cat([x, y, z], dim=1)
 
 
-def radial_slice(throat_ratio: float, x_location, n_radius=80, n_theta=120):
+def radial_slice(
+    throat_ratio: float,
+    x_location,
+    n_radius=80,
+    n_theta=120,
+    *,
+    mach_number: float,
+):
     """
     Generate one circular slice.
     """
 
     radius = nozzle_radius(
-        torch.tensor([[x_location]], device=DEVICE), throat_ratio=throat_ratio
+        torch.tensor([[x_location]], device=DEVICE),
+        throat_ratio=throat_ratio,
+        target_exit_mach=mach_number,
     ).item()
 
     r = torch.linspace(0.0, radius, n_radius, device=DEVICE)
@@ -39,14 +48,23 @@ def radial_slice(throat_ratio: float, x_location, n_radius=80, n_theta=120):
     return (points, rr, tt)
 
 
-def longitudinal_slice(throat_ratio: float, theta_location=0.0, n_x=80, n_radius=120):
+def longitudinal_slice(
+    throat_ratio: float,
+    theta_location=0.0,
+    n_x=80,
+    n_radius=120,
+    *,
+    mach_number: float,
+):
     """
     Generate a longitudinal slice at a fixed azimuthal angle.
     """
 
     theta = float(theta_location)
     x = torch.linspace(0.0, L_TOTAL, n_x, device=DEVICE)
-    radius = nozzle_radius(x, throat_ratio=throat_ratio).view(-1)
+    radius = nozzle_radius(
+        x, throat_ratio=throat_ratio, target_exit_mach=mach_number
+    ).view(-1)
 
     r = torch.linspace(0.0, 1.0, n_radius, device=DEVICE).unsqueeze(
         0
@@ -60,7 +78,13 @@ def longitudinal_slice(throat_ratio: float, theta_location=0.0, n_x=80, n_radius
     return (points, xx, r)
 
 
-def nozzle_surface_points(throat_ratio: float, n_x=120, n_theta=180):
+def nozzle_surface_points(
+    throat_ratio: float,
+    n_x=120,
+    n_theta=180,
+    *,
+    mach_number: float,
+):
     """
     Sample the full nozzle sidewall surface while excluding the inlet and outlet
     end caps.
@@ -83,7 +107,9 @@ def nozzle_surface_points(throat_ratio: float, n_x=120, n_theta=180):
 
     theta = torch.linspace(0.0, 2.0 * math.pi, n_theta, device=DEVICE)
     xx, tt = torch.meshgrid(x, theta, indexing="ij")
-    radius = nozzle_radius(xx, throat_ratio=throat_ratio)
+    radius = nozzle_radius(
+        xx, throat_ratio=throat_ratio, target_exit_mach=mach_number
+    )
 
     yy = radius * torch.cos(tt)
     zz = radius * torch.sin(tt)

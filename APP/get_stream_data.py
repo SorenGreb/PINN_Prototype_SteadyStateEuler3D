@@ -3,7 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 from PINN.pinn import DEVICE
-from GEOMETRY.geometry import nozzle_radius, L_TOTAL
+from GEOMETRY.geometry import MACH_MAX, MACH_MIN, nozzle_radius, L_TOTAL
 from GEOMETRY.probes import centerline_points, nozzle_surface_points
 from PINN.predictor import Predictor
 
@@ -40,11 +40,14 @@ class SurfaceParticleSystem:
         x_max: float,
         injection_rate: float,
         throat_ratio: float = 0.30,
+        *,
+        mach_number: float,
     ):
         self.x_min = x_min
         self.x_max = x_max
         self.injection_rate = injection_rate
         self.throat_ratio = float(throat_ratio)
+        self.mach_number = float(mach_number)
 
         self.particles = []
 
@@ -162,12 +165,14 @@ class SurfaceParticleSystem:
                 nozzle_radius(
                     torch.tensor(x + dx_eps, device=DEVICE),
                     throat_ratio=self.throat_ratio,
+                    target_exit_mach=self.mach_number,
                 )
             )
             r_minus = float(
                 nozzle_radius(
                     torch.tensor(x - dx_eps, device=DEVICE),
                     throat_ratio=self.throat_ratio,
+                    target_exit_mach=self.mach_number,
                 )
             )
 
@@ -217,7 +222,9 @@ class SurfaceParticleSystem:
 
             radius = float(
                 nozzle_radius(
-                    torch.tensor(x, device=DEVICE), throat_ratio=self.throat_ratio
+                    torch.tensor(x, device=DEVICE),
+                    throat_ratio=self.throat_ratio,
+                    target_exit_mach=self.mach_number,
                 )
             )
 
@@ -233,31 +240,51 @@ class SurfaceParticleSystem:
 
 
 particle_system = SurfaceParticleSystem(
-    x_min=0.0, x_max=L_TOTAL, injection_rate=5.0  # particles / second
+    x_min=0.0,
+    x_max=L_TOTAL,
+    injection_rate=5.0,
+    mach_number=(MACH_MIN + MACH_MAX) / 2.0,
 )
 
 
 def generate_surface_velocity_data(
-    predictor: Predictor, n_x: int = 50, n_theta: int = 60, throat_ratio: float = 0.30
+    predictor: Predictor,
+    n_x: int = 50,
+    n_theta: int = 60,
+    throat_ratio: float = 0.30,
+    *,
+    mach_number: float,
 ):
     global particle_system
 
-    if particle_system.throat_ratio != throat_ratio:
+    if (
+        particle_system.throat_ratio != throat_ratio
+        or particle_system.mach_number != mach_number
+    ):
         particle_system = SurfaceParticleSystem(
-            x_min=0.0, x_max=L_TOTAL, injection_rate=5.0, throat_ratio=throat_ratio
+            x_min=0.0,
+            x_max=L_TOTAL,
+            injection_rate=5.0,
+            throat_ratio=throat_ratio,
+            mach_number=mach_number,
         )
 
     points, xx, yy, zz = nozzle_surface_points(
-        throat_ratio=throat_ratio, n_x=n_x, n_theta=n_theta
+        throat_ratio=throat_ratio,
+        n_x=n_x,
+        n_theta=n_theta,
+        mach_number=mach_number,
     )
 
-    _, u, v, w, _ = predictor.predict(points, throat_ratio=throat_ratio)
+    _, u, v, w, _ = predictor.predict(
+        points, throat_ratio=throat_ratio, mach_number=mach_number
+    )
     velocity = predictor.velocity_magnitude(u, v, w)
     velocity = velocity.view(xx.shape[0], xx.shape[1]).cpu()
 
     centerline = centerline_points()
     rho_centerline, u_centerline, _, _, p_centerline = predictor.predict(
-        centerline, throat_ratio=throat_ratio
+        centerline, throat_ratio=throat_ratio, mach_number=mach_number
     )
     dt = 0.5
     particle_system.inject(dt)

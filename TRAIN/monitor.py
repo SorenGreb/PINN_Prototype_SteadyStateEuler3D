@@ -8,8 +8,12 @@ def monitor_centerline_velocity_rho_p(
     predictor: Predictor,
     throat_ratio: float,
     x_centerline: torch.Tensor,
+    *,
+    mach_number: float,
 ):
-    rho, u, v, w, p = predictor.predict(x_centerline, throat_ratio=throat_ratio)
+    rho, u, v, w, p = predictor.predict(
+        x_centerline, throat_ratio=throat_ratio, mach_number=mach_number
+    )
 
     velocity_magnitude = predictor.velocity_magnitude(u, v, w)
 
@@ -22,6 +26,8 @@ def monitor_crosssectional_massflow(
     x_centerline: torch.Tensor,
     n_radius: int = 30,
     n_theta: int = 45,
+    *,
+    mach_number: float,
 ):
     mass_flow = []
 
@@ -31,8 +37,11 @@ def monitor_crosssectional_massflow(
             x_location=x_location.item(),
             n_radius=n_radius,
             n_theta=n_theta,
+            mach_number=mach_number,
         )
-        rho, u, _, _, _ = predictor.predict(points, throat_ratio=throat_ratio)
+        rho, u, _, _, _ = predictor.predict(
+            points, throat_ratio=throat_ratio, mach_number=mach_number
+        )
 
         rho_u = (rho * u).reshape(radial_coordinates.shape)
         integrand = rho_u * radial_coordinates

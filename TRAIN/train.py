@@ -11,6 +11,7 @@ from TRAIN.monitor import (
     monitor_centerline_velocity_rho_p,
 )
 from DIRS.dirs import MODEL_PATH
+from GEOMETRY.geometry import MACH_MIN, MACH_MAX
 
 torch.set_default_dtype(torch.float32)
 
@@ -18,7 +19,7 @@ torch.set_default_dtype(torch.float32)
 # Training parameters
 # --------------------------------------------------------------------------
 
-EPOCHS = 20
+EPOCHS = 10000
 LEARNING_RATE = 2.0e-3
 
 
@@ -46,21 +47,34 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
     # For monitoring centerline velocity:
     predictor = Predictor(model=model, device=DEVICE)
     x_centerline = centerline_points(n_points=7)
-    fo_loss = open("results/loss_history.txt", "w")
+
+    results_dir = Path("results")
+    results_dir.mkdir(parents=True, exist_ok=True)
+    fo_loss = open(results_dir / "loss_history.txt", "w")
 
     ratio_files = {}
     for throat_ratio in (0.2, 0.3, 0.4):
         ratio_label = f"tr{int(throat_ratio * 100):02d}"
-        ratio_files[throat_ratio] = {
-            "velocity": open(f"results/centerline_velocity_{ratio_label}.txt", "w"),
-            "massflow": open(f"results/centerline_massflow_{ratio_label}.txt", "w"),
-            "rho": open(f"results/centerline_rho_{ratio_label}.txt", "w"),
-            "p": open(f"results/centerline_p_{ratio_label}.txt", "w"),
-        }
-        for key in ("velocity", "massflow", "rho", "p"):
-            for xi in x_centerline:
-                ratio_files[throat_ratio][key].write(f"{xi[0].item():.6f} ")
-            ratio_files[throat_ratio][key].write("\n")
+        for mach_number in torch.linspace(MACH_MIN, MACH_MAX, steps=8).tolist():
+            mach_label = f"ma{mach_number:.2f}"
+            ratio_files[(throat_ratio, mach_number)] = {
+                "velocity": open(
+                    f"results/centerline_velocity_{ratio_label}_{mach_label}.txt", "w"
+                ),
+                "massflow": open(
+                    f"results/centerline_massflow_{ratio_label}_{mach_label}.txt", "w"
+                ),
+                "rho": open(
+                    f"results/centerline_rho_{ratio_label}_{mach_label}.txt", "w"
+                ),
+                "p": open(f"results/centerline_p_{ratio_label}_{mach_label}.txt", "w"),
+            }
+            for key in ("velocity", "massflow", "rho", "p"):
+                for xi in x_centerline:
+                    ratio_files[(throat_ratio, mach_number)][key].write(
+                        f"{xi[0].item():.6f} "
+                    )
+                ratio_files[(throat_ratio, mach_number)][key].write("\n")
 
     for key in history:
         fo_loss.write(f"{key} ")
@@ -72,9 +86,14 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
         # Resample collocation points
         # --------------------------------------------------------------
 
-        x_interior, x_wall, x_inlet, x_outlet, sampled_throat_ratios = (
-            assemble_collocation_points()
-        )
+        (
+            x_interior,
+            x_wall,
+            x_inlet,
+            x_outlet,
+            sampled_throat_ratios,
+            sampled_mach_numbers,
+        ) = assemble_collocation_points()
         optimizer.zero_grad()
 
         (
@@ -92,6 +111,7 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
             x_inlet,
             x_outlet,
             sampled_throat_ratios,
+            sampled_mach_numbers,
         )
         loss.backward()
         optimizer.step()
@@ -124,12 +144,18 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
             )
 
             # if epoch % 1 == 0 or epoch == epochs - 1:
-            for throat_ratio, files in ratio_files.items():
+            for (throat_ratio, mach_number), files in ratio_files.items():
                 rho_tr, velocity_magnitude_tr, p_tr = monitor_centerline_velocity_rho_p(
-                    predictor, throat_ratio=throat_ratio, x_centerline=x_centerline
+                    predictor,
+                    throat_ratio=throat_ratio,
+                    x_centerline=x_centerline,
+                    mach_number=mach_number,
                 )
                 massflow_tr = monitor_crosssectional_massflow(
-                    predictor, throat_ratio=throat_ratio, x_centerline=x_centerline
+                    predictor,
+                    throat_ratio=throat_ratio,
+                    x_centerline=x_centerline,
+                    mach_number=mach_number,
                 )
 
                 for vi in velocity_magnitude_tr:

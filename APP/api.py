@@ -2,11 +2,13 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import torch
+from pydantic import BaseModel, Field
 
 from PINN.pinn import PINN
 from PINN.predictor import Predictor
 from APP.get_stream_data import generate_surface_velocity_data
 from DIRS.dirs import MODEL_PATH
+from GEOMETRY.geometry import MACH_MAX, MACH_MIN
 
 # ---------------------------------------------------------
 # Device
@@ -47,6 +49,7 @@ app.add_middleware(
 
 simulation_parameters = {
     "throat_ratio": 0.3,
+    "mach_number": (MACH_MIN + MACH_MAX) / 2.0,
 }
 
 
@@ -54,11 +57,9 @@ simulation_parameters = {
 # Optional REST endpoint
 # ---------------------------------------------------------
 
-from pydantic import BaseModel
-
-
 class SimulationConfig(BaseModel):
     throat_ratio: float
+    mach_number: float | None = Field(default=None, ge=MACH_MIN, le=MACH_MAX)
     """
     Pydantic model for simulation configuration.
 
@@ -88,10 +89,13 @@ async def update_config(
     """
 
     simulation_parameters["throat_ratio"] = config.throat_ratio
+    if config.mach_number is not None:
+        simulation_parameters["mach_number"] = config.mach_number
 
     return {
         "status": "updated",
         "throat_ratio": config.throat_ratio,
+        "mach_number": simulation_parameters["mach_number"],
     }
 
 
@@ -127,6 +131,7 @@ async def graph_stream(
     await websocket.accept()
 
     last_throat_ratio = None
+    last_mach_number = None
     last_data = None
 
     async def sender():
@@ -140,22 +145,27 @@ async def graph_stream(
         -------
         None.
         """
-        nonlocal last_throat_ratio, last_data
+        nonlocal last_throat_ratio, last_mach_number, last_data
 
         while True:
             throat_ratio = simulation_parameters["throat_ratio"]
+            mach_number = simulation_parameters["mach_number"]
 
             data = await asyncio.to_thread(
                 generate_surface_velocity_data,
                 predictor,
                 throat_ratio=throat_ratio,
+                mach_number=mach_number,
             )
 
-            # Discard outdated result if throat_ratio changed while computation ran
-            if throat_ratio != simulation_parameters["throat_ratio"]:
+            if (
+                throat_ratio != simulation_parameters["throat_ratio"]
+                or mach_number != simulation_parameters["mach_number"]
+            ):
                 continue
 
             last_throat_ratio = throat_ratio
+            last_mach_number = mach_number
             last_data = data
 
             await websocket.send_json(data)
@@ -181,6 +191,11 @@ async def graph_stream(
             if message.get("type") == "parameterUpdate":
                 value = float(message["throat_ratio"])
                 simulation_parameters["throat_ratio"] = min(0.4, max(0.2, value))
+                if "mach_number" in message:
+                    mach_number = float(message["mach_number"])
+                    simulation_parameters["mach_number"] = min(
+                        MACH_MAX, max(MACH_MIN, mach_number)
+                    )
 
     sender_task = asyncio.create_task(sender())
 

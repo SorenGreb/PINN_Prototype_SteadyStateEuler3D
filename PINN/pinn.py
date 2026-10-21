@@ -7,7 +7,6 @@ from GEOMETRY.geometry import (
     L_CONV,
     L_TOTAL,
     R_INLET,
-    TARGET_EXIT_MACH,
     inlet_speed_for_sonic_throat,
     nozzle_radius,
     nozzle_radius_gradient,
@@ -40,7 +39,7 @@ class PINN(nn.Module):
     def __init__(self, hidden_dim: int = 64, n_layers: int = 6) -> None:
         super().__init__()
 
-        layers = [nn.Linear(4, hidden_dim), nn.Tanh()]
+        layers = [nn.Linear(5, hidden_dim), nn.Tanh()]
 
         for _ in range(n_layers - 1):
             layers.extend([nn.Linear(hidden_dim, hidden_dim), nn.Tanh()])
@@ -49,7 +48,9 @@ class PINN(nn.Module):
         self.net = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x)
+        features = x.clone()
+        features[:, 4:5] = (features[:, 4:5] - 3.0)
+        return self.net(features)
 
 
 # ==========================================================================
@@ -291,9 +292,10 @@ def pde_loss(model, x):
 def massflow_loss(
     model: nn.Module,
     throat_ratios: torch.Tensor,
+    mach_numbers: torch.Tensor,
     n_x: int = 12,
-    n_radius: int = 30,
-    n_theta: int = 45,
+    n_radius: int = 12,
+    n_theta: int = 15,
 ):
     """Penalize axial variation of the integrated mass flow."""
 
@@ -313,41 +315,45 @@ def massflow_loss(
 
     mass_flows = []
     for throat_ratio in throat_ratios.reshape(-1):
-        x, radial = torch.meshgrid(x_locations, radial_coordinate, indexing="ij")
-        radius = nozzle_radius(x, throat_ratio)
-        radial = radial * radius
-        theta = angular_coordinate.view(1, 1, -1)
+        for mach_number in mach_numbers.reshape(-1):
+            x, radial_fraction = torch.meshgrid(
+                x_locations, radial_coordinate, indexing="ij"
+            )
+            radius = nozzle_radius(x, throat_ratio, mach_number)
+            radial = radial_fraction * radius
+            theta = angular_coordinate.view(1, 1, -1)
 
-        x_points = x.unsqueeze(-1).expand(-1, -1, n_theta)
-        y_points = radial.unsqueeze(-1) * torch.cos(theta)
-        z_points = radial.unsqueeze(-1) * torch.sin(theta)
-        ratio_points = torch.ones_like(x_points) * throat_ratio
-        points = torch.stack(
-            [x_points, y_points, z_points, ratio_points], dim=-1
-        ).reshape(-1, 4)
+            x_points = x.unsqueeze(-1).expand(-1, -1, n_theta)
+            y_points = radial.unsqueeze(-1) * torch.cos(theta)
+            z_points = radial.unsqueeze(-1) * torch.sin(theta)
+            ratio_points = torch.ones_like(x_points) * throat_ratio
+            mach_points = torch.ones_like(x_points) * mach_number
+            points = torch.stack(
+                [x_points, y_points, z_points, ratio_points, mach_points], dim=-1
+            ).reshape(-1, 5)
 
-        rho, u, _, _, _ = primitive_variables(model, points)
-        rho_u = (rho * u).reshape(n_x, n_radius, n_theta)
-        integrand = rho_u * radial.unsqueeze(-1)
-        radial_integral = torch.trapezoid(integrand, radial_coordinate, dim=1)
-        radial_integral = radial_integral * radius[:, 0:1]
-        slice_mass_flow = torch.trapezoid(radial_integral, angular_coordinate, dim=1)
-        mass_flows.append(slice_mass_flow)
+            rho, u, _, _, _ = primitive_variables(model, points)
+            rho_u = (rho * u).reshape(n_x, n_radius, n_theta)
+            integrand = rho_u * radial.unsqueeze(-1)
+            radial_integral = torch.trapezoid(integrand, radial_coordinate, dim=1)
+            radial_integral = radial_integral * radius[:, 0:1]
+            slice_mass_flow = torch.trapezoid(radial_integral, angular_coordinate, dim=1)
+            mass_flows.append(slice_mass_flow)
 
     mass_flows = torch.stack(mass_flows)
     reference = torch.stack(
         [
-            torch.as_tensor(
+            torch.full_like(
+                mass_flows[0],
                 RHO_INLET
                 * inlet_speed_for_sonic_throat(throat_radius(float(throat_ratio)))
                 * torch.pi
                 * R_INLET**2,
-                device=mass_flows.device,
-                dtype=mass_flows.dtype,
             )
             for throat_ratio in throat_ratios.reshape(-1)
+            for _ in mach_numbers.reshape(-1)
         ]
-    ).view(-1, 1)
+    )
     normalized_error = (mass_flows - reference).pow(2) / (reference.pow(2) + 1.0e-6)
     return torch.mean(normalized_error)
 
@@ -355,8 +361,9 @@ def massflow_loss(
 def sonic_throat_loss(
     model: nn.Module,
     throat_ratios: torch.Tensor,
-    n_radius: int = 30,
-    n_theta: int = 45,
+    mach_numbers: torch.Tensor,
+    n_radius: int = 12,
+    n_theta: int = 15,
 ):
     """Match the isentropic sonic state across every throat cross-section."""
 
@@ -374,25 +381,27 @@ def sonic_throat_loss(
 
     for throat_ratio in throat_ratios.reshape(-1):
         radius = throat_radius(float(throat_ratio))
-        radial = radial_coordinate.view(-1, 1) * radius
-        theta = angular_coordinate.view(1, -1)
-        x = torch.full_like(radial, L_CONV)
-        y = radial * torch.cos(theta)
-        z = radial * torch.sin(theta)
-        ratio = torch.full_like(x, throat_ratio)
-        points = torch.stack(
-            [x.expand_as(y), y, z, ratio.expand_as(y)], dim=-1
-        ).reshape(-1, 4)
+        for mach_number in mach_numbers.reshape(-1):
+            radial = radial_coordinate.view(-1, 1) * radius
+            theta = angular_coordinate.view(1, -1)
+            x = torch.full_like(radial, L_CONV)
+            y = radial * torch.cos(theta)
+            z = radial * torch.sin(theta)
+            ratio = torch.full_like(x, throat_ratio)
+            mach = torch.full_like(x, mach_number)
+            points = torch.stack(
+                [x.expand_as(y), y, z, ratio.expand_as(y), mach.expand_as(y)], dim=-1
+            ).reshape(-1, 5)
 
-        rho, u, _, _, p = primitive_variables(model, points)
-        target_rho, target_u, target_p = sonic_throat_state(radius)
-        losses.extend(
-            [
-                torch.mean((rho - target_rho).pow(2)) / (target_rho**2 + 1.0e-6),
-                torch.mean((u - target_u).pow(2)) / (target_u**2 + 1.0e-6),
-                torch.mean((p - target_p).pow(2)) / (target_p**2 + 1.0e-6),
-            ]
-        )
+            rho, u, _, _, p = primitive_variables(model, points)
+            target_rho, target_u, target_p = sonic_throat_state(radius)
+            losses.extend(
+                [
+                    torch.mean((rho - target_rho).pow(2)) / (target_rho**2 + 1.0e-6),
+                    torch.mean((u - target_u).pow(2)) / (target_u**2 + 1.0e-6),
+                    torch.mean((p - target_p).pow(2)) / (target_p**2 + 1.0e-6),
+                ]
+            )
 
     return torch.stack(losses).mean()
 
@@ -416,9 +425,10 @@ def wall_loss(
     y = x_wall[:, 1:2]
     z = x_wall[:, 2:3]
     throat_ratio = x_wall[:, 3:4]
+    mach_number = x_wall[:, 4:5]
 
-    R = nozzle_radius(x, throat_ratio)
-    dRdx = nozzle_radius_gradient(x, throat_ratio)
+    R = nozzle_radius(x, throat_ratio, mach_number)
+    dRdx = nozzle_radius_gradient(x, throat_ratio, mach_number)
 
     nx = -R * dRdx
     ny = y
@@ -490,7 +500,8 @@ def outlet_loss(model: nn.Module, x_outlet: torch.Tensor):
 
     speed_of_sound = torch.sqrt(GAMMA * p / rho)
     mach = u / speed_of_sound
-    mach_loss = torch.mean((mach - TARGET_EXIT_MACH).pow(2))
+    mach_target = x_outlet[:, 4:5]
+    mach_loss = torch.mean((mach - mach_target).pow(2))
 
     loss = (
         torch.mean(rho_x.pow(2))
@@ -509,14 +520,16 @@ def outlet_loss(model: nn.Module, x_outlet: torch.Tensor):
 # ==========================================================================
 
 
-def compute_losses(model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios):
+def compute_losses(
+    model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios, mach_numbers
+):
     """
     Compute every individual loss term.
     """
 
     loss_pde = pde_loss(model, x_interior)
-    loss_massflow = massflow_loss(model, throat_ratios)
-    loss_sonic_throat = sonic_throat_loss(model, throat_ratios)
+    loss_massflow = massflow_loss(model, throat_ratios, mach_numbers)
+    loss_sonic_throat = sonic_throat_loss(model, throat_ratios, mach_numbers)
     loss_wall = wall_loss(model, x_wall)
     loss_inlet = inlet_loss(model, x_inlet)
     loss_outlet = outlet_loss(model, x_outlet)
@@ -536,7 +549,9 @@ def compute_losses(model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios):
 # ==========================================================================
 
 
-def total_loss(model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios):
+def total_loss(
+    model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios, mach_numbers
+):
     """
     Complete PINN objective.
     """
@@ -548,7 +563,9 @@ def total_loss(model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios):
         loss_wall,
         loss_inlet,
         loss_outlet,
-    ) = compute_losses(model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios)
+    ) = compute_losses(
+        model, x_interior, x_wall, x_inlet, x_outlet, throat_ratios, mach_numbers
+    )
     w_pde = 1.0
     w_massflow = 1.0
     w_sonic_throat = 1.0

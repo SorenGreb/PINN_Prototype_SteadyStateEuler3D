@@ -14,7 +14,8 @@ L_CONV = 2.0
 L_DIV = 4.0
 R_INLET = 0.50
 L_TOTAL = L_CONV + L_DIV
-TARGET_EXIT_MACH = 3.5
+MACH_MIN = 2.0
+MACH_MAX = 4.0
 
 
 def throat_radius(throat_ratio: float) -> float:
@@ -77,12 +78,38 @@ def sonic_throat_state(throat_radius: float) -> tuple[float, float, float]:
 
 
 def exit_radius(
-    throat_radius: float, target_exit_mach: float = TARGET_EXIT_MACH
-) -> float:
+    throat_radius: float | torch.Tensor,
+    target_exit_mach: float | torch.Tensor,
+) -> float | torch.Tensor:
     """Return exit radius for a choked isentropic nozzle at target Mach."""
 
-    if target_exit_mach < 1.0:
-        raise ValueError("target_exit_mach must be at least 1 for a choked nozzle")
+    if torch.is_tensor(throat_radius) or torch.is_tensor(target_exit_mach):
+        reference = (
+            throat_radius if torch.is_tensor(throat_radius) else target_exit_mach
+        )
+        throat_radius_tensor = torch.as_tensor(
+            throat_radius, device=reference.device, dtype=reference.dtype
+        )
+        mach_tensor = torch.as_tensor(
+            target_exit_mach, device=reference.device, dtype=reference.dtype
+        )
+        if not torch.isfinite(mach_tensor).all() or torch.any(
+            (mach_tensor < MACH_MIN) | (mach_tensor > MACH_MAX)
+        ):
+            raise ValueError(
+                f"target_exit_mach must be between {MACH_MIN} and {MACH_MAX}"
+            )
+
+        mach_term = 1.0 + 0.5 * (GAMMA - 1.0) * mach_tensor**2
+        area_ratio = (1.0 / mach_tensor) * (
+            2.0 / (GAMMA + 1.0) * mach_term
+        ) ** ((GAMMA + 1.0) / (2.0 * (GAMMA - 1.0)))
+        return throat_radius_tensor * torch.sqrt(area_ratio)
+
+    if not math.isfinite(target_exit_mach) or not MACH_MIN <= target_exit_mach <= MACH_MAX:
+        raise ValueError(
+            f"target_exit_mach must be between {MACH_MIN} and {MACH_MAX}"
+        )
 
     mach_term = 1.0 + 0.5 * (GAMMA - 1.0) * target_exit_mach**2
     area_ratio = (1.0 / target_exit_mach) * (2.0 / (GAMMA + 1.0) * mach_term) ** (
@@ -94,7 +121,7 @@ def exit_radius(
 def nozzle_radius(
     x: torch.Tensor,
     throat_ratio: torch.Tensor | float,
-    target_exit_mach: float = TARGET_EXIT_MACH,
+    target_exit_mach: float | torch.Tensor,
 ) -> torch.Tensor:
 
     if not torch.is_tensor(throat_ratio):
@@ -121,7 +148,7 @@ def nozzle_radius(
 def nozzle_radius_gradient(
     x: torch.Tensor,
     throat_ratio: torch.Tensor | float,
-    target_exit_mach: float = TARGET_EXIT_MACH,
+    target_exit_mach: float | torch.Tensor,
 ) -> torch.Tensor:
 
     if not torch.is_tensor(throat_ratio):
@@ -147,8 +174,8 @@ def nozzle_radius_gradient(
 
 def wall_normal(
     x_wall: torch.Tensor,
-    throat_ratio: float,
-    target_exit_mach: float = TARGET_EXIT_MACH,
+    throat_ratio: torch.Tensor | float,
+    target_exit_mach: float | torch.Tensor,
 ):
     """
     Compute outward unit normal vector on the nozzle wall.

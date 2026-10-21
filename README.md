@@ -6,7 +6,7 @@ This repository implements a physics-informed neural network in PyTorch for the 
 
 ## What the project does
 
-- Trains a PINN to solve the steady compressible Euler equations in a De Laval nozzle with variable geometry
+- Trains a PINN to solve the steady compressible Euler equations in a De Laval nozzle with geometry parameterized by throat ratio and exit Mach number
 - Enforces conservation laws through physics-informed loss terms
 - Generates various plots
 - Serves a small FastAPI/WebSocket dashboard for live visualization
@@ -28,7 +28,7 @@ $$
 \nabla \cdot [(E+p) 𝐮] = 0,
 $$
 
-where $E$ is the total specific energy. A calorically perfect gas and isentropic expansion is assumed. The nozzle geometry is parametrized by the throat ratio and is discretized using Cartesian coordinates $(x, y, z)$.
+where $E$ is the total specific energy. A calorically perfect gas and isentropic expansion is assumed. The nozzle geometry is parametrized by the throat ratio and target exit Mach number and is discretized using Cartesian coordinates $(x, y, z)$. The network input is $(x, y, z, \text{throat ratio}, \text{exit Mach})$, with exit Mach training values spanning 2.0 to 4.0.
 
 **Boundary conditions:**
 - **Inlet:** Uniform primitive variables (density, velocity, pressure)
@@ -132,7 +132,15 @@ To train the model:
 python TRAIN/train.py
 ```
 
-This will train the PINN and save the model to `model/model.pth`. Alternatively, you can skip the training step and proceed with the pre-trained PINN `model_pretrained/model.pth`. To do so, copy the pre-trained model into `model/`. The network and training parameters, such as layers, dimensions, learning rate, epochs, optimizer, etc., are specified in `TRAIN/train.py`.
+This will train the PINN and save the model to `model/model.pth`. Existing checkpoints use the previous four-input network and must be retrained before inference with the five-input model. `TRAIN/retrain.py` can warm-start from a legacy checkpoint by initializing the new Mach input weights to zero. The network and training parameters, such as layers, dimensions, learning rate, epochs, optimizer, etc., are specified in `TRAIN/train.py`.
+
+At inference time, pass `mach_number` to `Predictor.predict`, for example:
+
+```python
+predictor.predict(points, throat_ratio=0.3, mach_number=2.5)
+```
+
+The live dashboard exposes both throat ratio and exit Mach sliders.
 
 ### Generating plots
 
