@@ -19,7 +19,7 @@ torch.set_default_dtype(torch.float32)
 # Training parameters
 # --------------------------------------------------------------------------
 
-EPOCHS = 10
+EPOCHS = 10000
 LEARNING_RATE = 2.0e-3
 
 

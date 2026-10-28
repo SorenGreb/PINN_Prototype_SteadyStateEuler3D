@@ -146,6 +146,7 @@ def plot_centerline_quantity(
         (0, (5, 1)),
         (0, (3, 5, 1, 5)),
     ]
+    mach_markers = ["o", "s", "^", "D", "v", "P", "X"]
     line_colors = [
         "tab:blue",
         "tab:orange",
@@ -186,7 +187,10 @@ def plot_centerline_quantity(
                     y[:, point_index],
                     color=line_colors[point_index % len(line_colors)],
                     linestyle=line_styles[ratio_index % len(line_styles)],
-                    linewidth=1.5,
+                    marker=mach_markers[mach_index % len(mach_markers)],
+                    markevery=max(1, len(y) // 12),
+                    markersize=4,
+                    linewidth=1.0,
                     alpha=0.8,
                     label=(
                         f"{quantity} tr={throat_ratio:.2f} "
