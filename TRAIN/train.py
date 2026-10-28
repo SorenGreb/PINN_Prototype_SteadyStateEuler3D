@@ -19,7 +19,7 @@ torch.set_default_dtype(torch.float32)
 # Training parameters
 # --------------------------------------------------------------------------
 
-EPOCHS = 10000
+EPOCHS = 10
 LEARNING_RATE = 2.0e-3
 
 
@@ -53,9 +53,9 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
     fo_loss = open(results_dir / "loss_history.txt", "w")
 
     ratio_files = {}
-    for throat_ratio in (0.2, 0.3, 0.4):
-        ratio_label = f"tr{int(throat_ratio * 100):02d}"
-        for mach_number in torch.linspace(MACH_MIN, MACH_MAX, steps=8).tolist():
+    for throat_ratio in (0.2, 0.4):
+        ratio_label = f"tr{throat_ratio:.2f}"
+        for mach_number in (2.0, 4.0):
             mach_label = f"ma{mach_number:.2f}"
             ratio_files[(throat_ratio, mach_number)] = {
                 "velocity": open(

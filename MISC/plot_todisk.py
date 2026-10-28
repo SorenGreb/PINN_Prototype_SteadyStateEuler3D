@@ -164,7 +164,7 @@ def plot_centerline_quantity(
         for mach_index, mach_number in enumerate(mach_numbers):
             file_name = (
                 f"{RESULTS_DIR}/centerline_{quantity}_"
-                f"tr{int(throat_ratio * 100):02d}_ma{mach_number:.2f}.txt"
+                f"tr{throat_ratio:.2f}_ma{mach_number:.2f}.txt"
             )
             try:
                 with open(file_name, "r") as fo:
