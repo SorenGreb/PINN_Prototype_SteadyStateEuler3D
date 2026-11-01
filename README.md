@@ -60,6 +60,7 @@ where $E$ is the total specific energy. A calorically perfect gas and isentropic
 │   └── probes.py                --> Centerline, slice, and surface probes
 ├── MISC/
 │   ├── calc_ref_states.py       --> Reference-state calculations
+│   ├── calc_errors.py           --> Relative errors for final centerline results
 │   └── plot_todisk.py           --> Static plot export to disk
 ├── PINN/
 │   ├── derivatives.py           --> Automatic-differentiation helpers
@@ -149,6 +150,21 @@ To generate static velocity plots and save them to the `results/` directory:
 ```bash
 python MISC/plot_todisk.py
 ```
+
+### Calculating centerline errors
+
+To compare the final centerline result rows with the isentropic reference states:
+
+```bash
+python -m MISC.calc_errors
+```
+
+The script reports the aggregate relative L1 error and pointwise relative error at
+each x-location for velocity magnitude, density, pressure, and mass flow at each
+available throat-ratio/exit-Mach combination. Pass a results directory as an
+optional argument to analyze a different set of result files. It also saves a
+single PDF, `centerline_relative_errors_with_legend.pdf`, in that directory with per-location
+error curves for each quantity and case.
 
 ### Running the live dashboard
 

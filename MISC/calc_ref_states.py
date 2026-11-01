@@ -55,12 +55,15 @@ def calc_ref_states(throat_ratio, mach_out, x):
 throat_ratio = 0.4
 mach_out = 2.0
 x = 6.0
-R_x, rho_x, u_x, p_x, c_x, mach_x, massflow = calc_ref_states(throat_ratio, mach_out, x)
+if __name__ == "__main__":
+    R_x, rho_x, u_x, p_x, c_x, mach_x, massflow = calc_ref_states(
+        throat_ratio, mach_out, x
+    )
 
-print("R_x     :", f"{R_x:.3f}")
-print("rho_x   :", f"{rho_x:.3f}")
-print("u_x     :", f"{u_x:.3f}")
-print("p_x     :", f"{p_x:.3f}")
-print("c_x     :", f"{c_x:.3f}")
-print("mach_x  :", f"{mach_x:.3f}")
-print("massflow:", f"{massflow:.3f}")
+    print("R_x     :", f"{R_x:.3f}")
+    print("rho_x   :", f"{rho_x:.3f}")
+    print("u_x     :", f"{u_x:.3f}")
+    print("p_x     :", f"{p_x:.3f}")
+    print("c_x     :", f"{c_x:.3f}")
+    print("mach_x  :", f"{mach_x:.3f}")
+    print("massflow:", f"{massflow:.3f}")
