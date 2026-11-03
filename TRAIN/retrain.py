@@ -5,6 +5,8 @@ from DIRS.dirs import MODEL_PATH
 
 torch.set_default_dtype(torch.float32)
 
+SEED = 42
+
 
 def load_model():
     state_dict = torch.load(MODEL_PATH, map_location=DEVICE, weights_only=True)
@@ -48,5 +50,6 @@ def load_model():
 
 
 if __name__ == "__main__":
+    torch.manual_seed(SEED)
     model = load_model()
     model, history = train_pinn(model)

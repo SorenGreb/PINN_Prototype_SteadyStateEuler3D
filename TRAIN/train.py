@@ -19,8 +19,9 @@ torch.set_default_dtype(torch.float32)
 # Training parameters
 # --------------------------------------------------------------------------
 
-EPOCHS = 30000
+EPOCHS = 50000
 LEARNING_RATE = 2.0e-3
+SEED = 42
 
 
 def train_pinn(model: nn.Module, epochs: int = EPOCHS):
@@ -194,5 +195,6 @@ def train_pinn(model: nn.Module, epochs: int = EPOCHS):
 
 
 if __name__ == "__main__":
+    torch.manual_seed(SEED)
     model = PINN(hidden_dim=64, n_layers=2)
     train_pinn(model)

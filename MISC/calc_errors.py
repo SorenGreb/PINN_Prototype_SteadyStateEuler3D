@@ -5,18 +5,9 @@ import math
 import re
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-
 from DIRS.dirs import RESULTS_DIR
-from GEOMETRY.geometry import L_CONV, L_TOTAL
 from MISC.calc_ref_states import calc_ref_states
 
-QUANTITY_LABELS = {
-    "velocity": "Velocity magnitude",
-    "massflow": "Mass flow",
-    "rho": "Density",
-    "p": "Pressure",
-}
 QUANTITIES = {
     "velocity": 2,
     "massflow": 6,
@@ -105,73 +96,6 @@ def calculate_errors(
     return errors
 
 
-def plot_location_errors(
-    errors: list[tuple[float, float, str, float, list[tuple[float, float]]]],
-    output_path: Path,
-) -> tuple[float, float]:
-    """Save pointwise relative errors for all quantities and cases as one PDF."""
-    maximum_error_percent = max(
-        error * 100
-        for _, _, _, _, location_errors in errors
-        for _, error in location_errors
-    )
-    y_axis_max = maximum_error_percent * 1.1 if maximum_error_percent else 1.0
-    figure, axes = plt.subplots(2, 2, figsize=(11, 8), sharex=True, sharey=True)
-    axes_by_quantity = {
-        quantity: axes.flat[index] for index, quantity in enumerate(QUANTITIES)
-    }
-
-    for throat_ratio, mach_number, quantity, _, location_errors in errors:
-        x_values, relative_errors = zip(*location_errors)
-        axes_by_quantity[quantity].plot(
-            x_values,
-            [error * 100 for error in relative_errors],
-            marker="o",
-            linewidth=1.5,
-            label=f"tr={throat_ratio:.2f}, M={mach_number:.2f}",
-        )
-
-    legend_handles, legend_labels = axes.flat[0].get_legend_handles_labels()
-    for quantity, axis in axes_by_quantity.items():
-        axis.set_title(QUANTITY_LABELS[quantity])
-        axis.set_ylabel("Relative error (%)")
-        axis.grid(True, alpha=0.3)
-        axis.set_ylim(0, y_axis_max)
-        for location, label, alignment in (
-            (0.0, "Inlet", "left"),
-            (L_CONV, "Throat", "center"),
-            (L_TOTAL, "Outlet", "right"),
-        ):
-            axis.axvline(location, color="black", linestyle=":", linewidth=0.9)
-            axis.text(
-                location,
-                0.98,
-                label,
-                transform=axis.get_xaxis_transform(),
-                horizontalalignment=alignment,
-                verticalalignment="top",
-                fontsize=8,
-                bbox={"facecolor": "white", "alpha": 0.8, "edgecolor": "none"},
-            )
-
-    for axis in axes[-1, :]:
-        axis.set_xlabel("Axial location, x")
-
-    figure.suptitle("Final centerline relative error by location")
-    figure.legend(
-        legend_handles,
-        legend_labels,
-        loc="lower center",
-        bbox_to_anchor=(0.5, 0.03),
-        ncol=len(legend_labels),
-        fontsize=8,
-    )
-    figure.tight_layout(rect=(0, 0.1, 1, 0.95))
-    figure.savefig(output_path, format="pdf")
-    plt.close(figure)
-    return maximum_error_percent, y_axis_max
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -188,14 +112,6 @@ def main() -> None:
         raise FileNotFoundError(
             f"No centerline result files found in {args.results_dir}"
         )
-
-    plot_path = args.results_dir / "centerline_relative_errors.pdf"
-    maximum_error, y_axis_max = plot_location_errors(errors, plot_path)
-    print(f"Saved location-error plot to {plot_path}")
-    print(
-        f"Maximum pointwise error: {maximum_error:.6f}% "
-        f"(shared y-axis upper limit: {y_axis_max:.6f}%)"
-    )
 
     print("Aggregate relative L1 errors")
     print("throat_ratio  exit_mach  quantity  relative_L1_error")

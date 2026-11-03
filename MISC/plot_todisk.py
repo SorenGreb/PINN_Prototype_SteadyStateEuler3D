@@ -8,11 +8,41 @@ from PINN.pinn import PINN, DEVICE
 
 from PINN.predictor import Predictor
 from GEOMETRY.probes import nozzle_surface_points, longitudinal_slice
-from GEOMETRY.geometry import MACH_MAX, MACH_MIN
+from GEOMETRY.geometry import L_CONV, L_TOTAL, MACH_MAX, MACH_MIN
 from TRAIN.train import MODEL_PATH
 from DIRS.dirs import RESULTS_DIR
+from MISC.calc_errors import calculate_errors
 
 torch.set_default_dtype(torch.float32)
+
+QUANTITY_LABELS = {
+    "velocity": "Velocity magnitude",
+    "massflow": "Mass flow",
+    "rho": "Density",
+    "p": "Pressure",
+}
+LINE_STYLES = [
+    "-",
+    "--",
+    ":",
+    "-.",
+    (0, (3, 1, 1, 1)),
+    (0, (5, 1)),
+    (0, (3, 5, 1, 5)),
+]
+MACH_MARKERS = ["o", "s", "^", "D", "v", "P", "X"]
+LINE_COLORS = [
+    "tab:blue",
+    "tab:orange",
+    "tab:green",
+    "tab:red",
+    "tab:purple",
+    "tab:brown",
+    "tab:pink",
+    "tab:gray",
+    "tab:olive",
+    "tab:cyan",
+]
 
 
 def plot_longitudinal_velocity(
@@ -137,28 +167,6 @@ def plot_nozzle_surface_velocity(
 def plot_centerline_quantity(
     quantity: str, throat_ratios=(0.2, 0.4), mach_numbers=(2.0, 4.0)
 ):
-    line_styles = [
-        "-",
-        "--",
-        ":",
-        "-.",
-        (0, (3, 1, 1, 1)),
-        (0, (5, 1)),
-        (0, (3, 5, 1, 5)),
-    ]
-    mach_markers = ["o", "s", "^", "D", "v", "P", "X"]
-    line_colors = [
-        "tab:blue",
-        "tab:orange",
-        "tab:green",
-        "tab:red",
-        "tab:purple",
-        "tab:brown",
-        "tab:pink",
-        "tab:gray",
-        "tab:olive",
-        "tab:cyan",
-    ]
     fig, ax = plt.subplots(figsize=(10, 5))
 
     for ratio_index, throat_ratio in enumerate(throat_ratios):
@@ -185,9 +193,9 @@ def plot_centerline_quantity(
             for point_index in range(len(x)):
                 ax.plot(
                     y[:, point_index],
-                    color=line_colors[point_index % len(line_colors)],
-                    linestyle=line_styles[ratio_index % len(line_styles)],
-                    marker=mach_markers[mach_index % len(mach_markers)],
+                    color=LINE_COLORS[point_index % len(LINE_COLORS)],
+                    linestyle=LINE_STYLES[ratio_index % len(LINE_STYLES)],
+                    marker=MACH_MARKERS[mach_index % len(MACH_MARKERS)],
                     markevery=max(1, len(y) // 12),
                     markersize=4,
                     linewidth=1.0,
@@ -202,7 +210,9 @@ def plot_centerline_quantity(
     ax.set_xlabel("epoch")
     ax.set_ylabel(quantity)
     ax.set_title(
-        f"centerline {quantity} for throat ratios {', '.join(f'{r:.2f}' for r in throat_ratios)}"
+        f"centerline {quantity} for throat ratios "
+        f"{', '.join(f'{r:.2f}' for r in throat_ratios)} and exit Mach numbers "
+        f"{', '.join(f'{mach:.2f}' for mach in mach_numbers)}"
     )
     ax.grid(True)
     ax.legend(loc="center left", bbox_to_anchor=(1.0, 0.5), fontsize=8)
@@ -236,6 +246,86 @@ def plot_loss_history():
     fo.close()
 
 
+def plot_location_errors(
+    errors: list[tuple[float, float, str, float, list[tuple[float, float]]]],
+    output_path: Path,
+) -> tuple[float, float]:
+    """Save pointwise relative errors for all quantities and cases as one PDF."""
+    maximum_error_percent = max(
+        error * 100
+        for _, _, _, _, location_errors in errors
+        for _, error in location_errors
+    )
+    y_axis_max = maximum_error_percent * 1.1 if maximum_error_percent else 1.0
+    figure, axes = plt.subplots(2, 2, figsize=(11, 8), sharex=True, sharey=True)
+    axes_by_quantity = {
+        quantity: axes.flat[index] for index, quantity in enumerate(QUANTITY_LABELS)
+    }
+    throat_ratios = sorted({throat_ratio for throat_ratio, *_ in errors})
+    mach_numbers = sorted({mach_number for _, mach_number, *_ in errors})
+
+    for throat_ratio, mach_number, quantity, _, location_errors in errors:
+        x_values, relative_errors = zip(*location_errors)
+        axes_by_quantity[quantity].plot(
+            x_values,
+            [error * 100 for error in relative_errors],
+            color="black",
+            linestyle=LINE_STYLES[throat_ratios.index(throat_ratio) % len(LINE_STYLES)],
+            marker=MACH_MARKERS[mach_numbers.index(mach_number) % len(MACH_MARKERS)],
+            linewidth=1.5,
+            label=f"tr={throat_ratio:.2f}, M={mach_number:.2f}",
+        )
+
+    legend_handles, legend_labels = axes.flat[0].get_legend_handles_labels()
+    for quantity, axis in axes_by_quantity.items():
+        axis.set_title(QUANTITY_LABELS[quantity])
+        axis.set_ylabel("Relative error (%)")
+        axis.grid(True, alpha=0.3)
+        axis.set_ylim(0, y_axis_max)
+        for location, label, alignment in (
+            (0.0, "Inlet", "left"),
+            (L_CONV, "Throat", "center"),
+            (L_TOTAL, "Outlet", "right"),
+        ):
+            axis.axvline(location, color="black", linestyle=":", linewidth=0.9)
+            axis.text(
+                location,
+                0.98,
+                label,
+                transform=axis.get_xaxis_transform(),
+                horizontalalignment=alignment,
+                verticalalignment="top",
+                fontsize=8,
+                bbox={"facecolor": "white", "alpha": 0.8, "edgecolor": "none"},
+            )
+
+    for axis in axes[-1, :]:
+        axis.set_xlabel("Axial location, x")
+
+    figure.suptitle("Final centerline relative error by location")
+    figure.legend(
+        legend_handles,
+        legend_labels,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0.03),
+        ncol=len(legend_labels),
+        fontsize=8,
+    )
+    figure.tight_layout(rect=(0, 0.1, 1, 0.95))
+    figure.savefig(output_path, format="pdf")
+    plt.close(figure)
+    return maximum_error_percent, y_axis_max
+
+
+def plot_centerline_relative_errors():
+    errors = calculate_errors(RESULTS_DIR)
+    if not errors:
+        raise FileNotFoundError(f"No centerline result files found in {RESULTS_DIR}")
+
+    output_path = RESULTS_DIR / "centerline_relative_errors.pdf"
+    _, _ = plot_location_errors(errors, output_path)
+
+
 def main():
     model = PINN(hidden_dim=64, n_layers=2).to(DEVICE)
     checkpoint = torch.load(MODEL_PATH, map_location=DEVICE)
@@ -262,6 +352,7 @@ def main():
     plot_centerline_quantity(quantity="rho")
     plot_centerline_quantity(quantity="p")
     plot_loss_history()
+    plot_centerline_relative_errors()
 
 
 if __name__ == "__main__":
