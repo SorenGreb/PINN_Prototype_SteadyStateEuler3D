@@ -96,7 +96,7 @@ def plot_longitudinal_velocity(
     # ax.set_xlim(float(xx.min().cpu().numpy()), float(xx.max().cpu().numpy()))
     # ax.set_ylim(float(r.min().cpu().numpy()), float(r.max().cpu().numpy()))
     ax.set_xlim(0, 6)
-    ax.set_ylim(0, 0.55)
+    ax.set_ylim(0, 0.7)
     fig.colorbar(mesh, ax=ax, label="Velocity magnitude")
     plt.grid()
 
@@ -334,15 +334,19 @@ def main():
 
     RESULTS_DIR.mkdir(exist_ok=True)
 
-    throat_ratio = 0.40
-    mach_number = (MACH_MIN + MACH_MAX) / 2.0
+    throat_ratio = 0.20
+    mach_number = 2.0
 
-    output_path = RESULTS_DIR / f"delaval_pinn_slice_{throat_ratio:.2f}.pdf"
+    output_path = (
+        RESULTS_DIR / f"delaval_pinn_slice_tr{throat_ratio:.2f}_ma{mach_number:.2f}.pdf"
+    )
     plot_longitudinal_velocity(
         predictor, output_path, throat_ratio=throat_ratio, mach_number=mach_number
     )
 
-    output_path = RESULTS_DIR / f"delaval_pinn_surf_{throat_ratio:.2f}.pdf"
+    output_path = (
+        RESULTS_DIR / f"delaval_pinn_surf_tr{throat_ratio:.2f}_ma{mach_number:.2f}.pdf"
+    )
     plot_nozzle_surface_velocity(
         predictor, output_path, throat_ratio=throat_ratio, mach_number=mach_number
     )
